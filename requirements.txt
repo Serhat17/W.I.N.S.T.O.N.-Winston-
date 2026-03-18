@@ -1,0 +1,30 @@
+# Core LLM / Interaction
+requests>=2.31.0
+httpx>=0.28.0
+
+# Text-to-Speech & Audio
+sounddevice>=0.4.6
+soundfile>=0.12.1
+pyaudio>=0.2.14
+
+# Speech Recognition & Wake Word
+faster-whisper>=1.0.0
+openwakeword>=0.6.0
+
+# Skills
+ddgs>=7.0
+beautifulsoup4>=4.12.0
+trafilatura>=1.6.0
+
+# Utilities
+PyYAML>=6.0.1
+APScheduler>=3.10.4
+python-telegram-bot[job-queue]>=21.0.0
+
+# macOS Integrations (Applescript, etc)
+pyobjc-framework-AppleScriptKit>=10.1; sys_platform == "darwin"
+pyobjc-core>=10.1; sys_platform == "darwin"
+
+# Testing
+pytest>=7.0
+pytest-asyncio>=0.21

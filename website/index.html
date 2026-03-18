@@ -1,0 +1,1471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>W.I.N.S.T.O.N. — Your Private AI Assistant</title>
+<style>
+/* ─── Reset & Base ─────────────────────────────────── */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg-primary: #060a13;
+  --bg-secondary: #0c1220;
+  --bg-card: #0f1729;
+  --bg-card-hover: #141e33;
+  --arc-blue: #3b9eff;
+  --arc-glow: #1a7ae6;
+  --arc-cyan: #00d4ff;
+  --arc-dim: #1a3a5c;
+  --text-primary: #e8edf5;
+  --text-secondary: #8899b3;
+  --text-muted: #566a88;
+  --border: #1a2740;
+  --border-glow: rgba(59, 158, 255, 0.3);
+  --gradient-arc: linear-gradient(135deg, #3b9eff, #00d4ff);
+  --font: 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+  --font-mono: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--font);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+a { color: var(--arc-blue); text-decoration: none; transition: color 0.2s; }
+a:hover { color: var(--arc-cyan); }
+
+/* ─── Navigation ───────────────────────────────────── */
+nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background: rgba(6, 10, 19, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 2rem;
+  transition: box-shadow 0.3s;
+}
+
+nav.scrolled { box-shadow: 0 2px 30px rgba(59, 158, 255, 0.1); }
+
+.nav-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 64px;
+}
+
+.nav-logo {
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+  background: var(--gradient-arc);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.nav-links { display: flex; gap: 1.5rem; list-style: none; }
+
+.nav-links a {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  transition: color 0.2s;
+}
+.nav-links a:hover { color: var(--arc-blue); }
+
+.nav-toggle { display: none; background: none; border: none; color: var(--text-primary); font-size: 1.5rem; cursor: pointer; }
+
+/* ─── Hero ─────────────────────────────────────────── */
+.hero {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 6rem 2rem 4rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.hero::before {
+  content: '';
+  position: absolute;
+  width: 600px;
+  height: 600px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(59, 158, 255, 0.08) 0%, transparent 70%);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+/* Arc Reactor */
+.arc-reactor {
+  width: 160px;
+  height: 160px;
+  position: relative;
+  margin-bottom: 2.5rem;
+}
+
+.arc-reactor .core {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 30px;
+  height: 30px;
+  background: radial-gradient(circle, #fff, var(--arc-cyan));
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 30px var(--arc-cyan), 0 0 60px var(--arc-blue), 0 0 100px rgba(59, 158, 255, 0.3);
+  animation: pulse-core 2s ease-in-out infinite;
+}
+
+.arc-reactor .ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  border: 2px solid var(--arc-blue);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  opacity: 0.6;
+}
+
+.arc-reactor .ring-1 { width: 60px; height: 60px; animation: spin-ring 8s linear infinite; border-style: dashed; }
+.arc-reactor .ring-2 { width: 90px; height: 90px; animation: spin-ring 12s linear infinite reverse; opacity: 0.4; }
+.arc-reactor .ring-3 { width: 120px; height: 120px; animation: spin-ring 16s linear infinite; opacity: 0.25; border-style: dotted; }
+.arc-reactor .ring-4 { width: 150px; height: 150px; opacity: 0.15; }
+
+@keyframes pulse-core {
+  0%, 100% { box-shadow: 0 0 30px var(--arc-cyan), 0 0 60px var(--arc-blue), 0 0 100px rgba(59, 158, 255, 0.3); }
+  50% { box-shadow: 0 0 40px var(--arc-cyan), 0 0 80px var(--arc-blue), 0 0 140px rgba(59, 158, 255, 0.5); }
+}
+
+@keyframes spin-ring {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+.hero h1 {
+  font-size: 3.5rem;
+  font-weight: 800;
+  letter-spacing: 6px;
+  margin-bottom: 0.75rem;
+  background: var(--gradient-arc);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hero .subtitle {
+  font-size: 1rem;
+  letter-spacing: 4px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+}
+
+.hero .tagline {
+  font-size: 1.3rem;
+  color: var(--text-secondary);
+  margin-bottom: 2.5rem;
+  max-width: 600px;
+}
+
+/* ─── Terminal Window ──────────────────────────────── */
+.terminal {
+  background: #0d1117;
+  border: 1px solid rgba(59, 158, 255, 0.15);
+  border-radius: 14px;
+  overflow: hidden;
+  max-width: 720px;
+  width: 100%;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5), 0 0 60px rgba(59, 158, 255, 0.05);
+}
+
+.terminal-header {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background: #161b22;
+  border-bottom: 1px solid rgba(59, 158, 255, 0.1);
+  gap: 0;
+}
+
+.terminal-dots {
+  display: flex;
+  gap: 6px;
+  margin-right: 1.25rem;
+  flex-shrink: 0;
+}
+
+.terminal-dots span {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+.terminal-dots .dot-red { background: #ff5f57; }
+.terminal-dots .dot-yellow { background: #febc2e; }
+.terminal-dots .dot-green { background: #28c840; }
+
+.terminal-tabs {
+  display: flex;
+  gap: 0;
+  flex: 1;
+  overflow-x: auto;
+}
+
+.terminal-tab {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  padding: 0.4rem 1rem;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: color 0.2s, background 0.2s;
+  white-space: nowrap;
+}
+.terminal-tab:hover { color: var(--text-secondary); background: rgba(255,255,255,0.04); }
+.terminal-tab.active {
+  color: var(--text-primary);
+  background: rgba(59, 158, 255, 0.12);
+  border: 1px solid rgba(59, 158, 255, 0.25);
+}
+
+.terminal-badge {
+  font-size: 0.6rem;
+  font-weight: 700;
+  padding: 0.1rem 0.45rem;
+  border-radius: 4px;
+  margin-left: 0.4rem;
+  vertical-align: middle;
+  letter-spacing: 0.5px;
+}
+.terminal-badge-blue { background: rgba(59, 158, 255, 0.2); color: var(--arc-blue); border: 1px solid rgba(59, 158, 255, 0.3); }
+
+.terminal-body {
+  padding: 1.25rem 1.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.88rem;
+  line-height: 2;
+}
+
+.terminal-pane { display: none; }
+.terminal-pane.active { display: block; }
+
+.term-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.term-comment {
+  color: #484f58;
+  font-style: italic;
+}
+
+.term-prompt {
+  color: #3bff82;
+  margin-right: 0.5rem;
+  user-select: none;
+}
+
+.term-cmd { color: var(--text-primary); }
+
+.term-copy-btn {
+  background: none;
+  border: 1px solid rgba(255,255,255,0.08);
+  color: #484f58;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s, border-color 0.2s, background 0.2s;
+  flex-shrink: 0;
+  margin-left: 1rem;
+}
+.term-copy-btn:hover { color: var(--text-secondary); border-color: rgba(255,255,255,0.15); background: rgba(255,255,255,0.04); }
+.term-copy-btn.copied { color: #3bff82; border-color: rgba(59, 255, 130, 0.3); }
+
+.term-copy-btn svg { width: 16px; height: 16px; }
+
+.terminal-footer {
+  text-align: center;
+  padding: 0.75rem 1rem;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  border-top: 1px solid rgba(59, 158, 255, 0.06);
+}
+
+.hero .terminal { margin-bottom: 1.5rem; }
+
+.hero-links { display: flex; gap: 1.5rem; }
+.hero-links a {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.hero-links a:hover { color: var(--arc-blue); }
+
+.scroll-hint {
+  position: absolute;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  animation: bounce 2s ease-in-out infinite;
+  color: var(--text-muted);
+  font-size: 1.5rem;
+}
+@keyframes bounce {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50% { transform: translateX(-50%) translateY(8px); }
+}
+
+/* ─── Sections ─────────────────────────────────────── */
+section { padding: 6rem 2rem; }
+
+.section-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.section-header {
+  text-align: center;
+  margin-bottom: 3.5rem;
+}
+
+.section-header h2 {
+  font-size: 2.2rem;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+  letter-spacing: 1px;
+}
+
+.section-header .accent {
+  background: var(--gradient-arc);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.section-header p {
+  color: var(--text-secondary);
+  font-size: 1.05rem;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.divider {
+  width: 60px;
+  height: 2px;
+  background: var(--gradient-arc);
+  margin: 1rem auto 0;
+  border-radius: 2px;
+}
+
+/* ─── Feature Grid ─────────────────────────────────── */
+#features { background: var(--bg-secondary); }
+
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+.feature-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 2rem;
+  transition: transform 0.2s, border-color 0.3s, box-shadow 0.3s;
+}
+
+.feature-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--border-glow);
+  box-shadow: 0 8px 32px rgba(59, 158, 255, 0.1);
+}
+
+.feature-icon {
+  font-size: 2rem;
+  margin-bottom: 1rem;
+  display: inline-block;
+}
+
+.feature-card h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.feature-card p {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+/* ─── Skills ───────────────────────────────────────── */
+.skills-category { margin-bottom: 2.5rem; }
+
+.skills-category h3 {
+  font-size: 0.85rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--arc-blue);
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.skills-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1rem;
+}
+
+.skill-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.25rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.skill-card:hover {
+  border-color: var(--border-glow);
+  box-shadow: 0 4px 20px rgba(59, 158, 255, 0.08);
+}
+
+.skill-card .skill-icon { font-size: 1.5rem; margin-bottom: 0.5rem; }
+.skill-card h4 { font-size: 0.95rem; font-weight: 600; margin-bottom: 0.35rem; }
+.skill-card p { color: var(--text-secondary); font-size: 0.8rem; line-height: 1.5; }
+
+.skill-tag {
+  display: inline-block;
+  font-size: 0.65rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  background: rgba(59, 158, 255, 0.1);
+  color: var(--arc-blue);
+  margin-top: 0.5rem;
+  font-family: var(--font-mono);
+}
+
+/* ─── Channels ─────────────────────────────────────── */
+#channels { background: var(--bg-secondary); }
+
+.channel-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.channel-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 2rem;
+  transition: transform 0.2s, border-color 0.3s;
+}
+
+.channel-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--border-glow);
+}
+
+.channel-card .ch-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.channel-card .ch-icon { font-size: 2rem; }
+
+.channel-card h3 { font-size: 1.15rem; font-weight: 600; }
+
+.channel-card ul {
+  list-style: none;
+  margin-top: 0.75rem;
+}
+
+.channel-card li {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  padding: 0.3rem 0;
+  padding-left: 1.25rem;
+  position: relative;
+}
+
+.channel-card li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  background: var(--arc-blue);
+  border-radius: 50%;
+  transform: translateY(-50%);
+}
+
+/* ─── Voice & Vision ───────────────────────────────── */
+.vv-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+.vv-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 2rem;
+}
+
+.vv-card h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.vv-card p { color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 0.75rem; }
+
+.vv-card .engine-list {
+  list-style: none;
+  margin-top: 0.5rem;
+}
+
+.vv-card .engine-list li {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  padding: 0.4rem 0;
+  border-bottom: 1px solid rgba(26, 39, 64, 0.5);
+  display: flex;
+  justify-content: space-between;
+}
+
+.vv-card .engine-list li:last-child { border-bottom: none; }
+
+.badge {
+  font-size: 0.65rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+.badge-cloud { background: rgba(255, 152, 59, 0.15); color: #ff983b; }
+.badge-local { background: rgba(59, 255, 130, 0.15); color: #3bff82; }
+.badge-builtin { background: rgba(150, 150, 150, 0.15); color: #aaa; }
+
+/* ─── Privacy ──────────────────────────────────────── */
+#privacy { background: var(--bg-secondary); }
+
+.privacy-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.privacy-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 2rem;
+}
+
+.privacy-card h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.privacy-card p { color: var(--text-secondary); font-size: 0.9rem; }
+
+.privacy-card ul {
+  list-style: none;
+  margin-top: 0.5rem;
+}
+
+.privacy-card li {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  padding: 0.3rem 0;
+  padding-left: 1.25rem;
+  position: relative;
+}
+
+.privacy-card li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  background: #3bff82;
+  border-radius: 50%;
+  transform: translateY(-50%);
+}
+
+/* ─── Installation ─────────────────────────────────── */
+.install-section { max-width: 800px; margin: 0 auto; }
+
+.install-step {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 2rem;
+  margin-bottom: 1.5rem;
+  position: relative;
+}
+
+.install-step .step-num {
+  position: absolute;
+  top: -12px;
+  left: 24px;
+  background: var(--gradient-arc);
+  color: #fff;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.install-step h3 { font-size: 1.05rem; font-weight: 600; margin-bottom: 0.75rem; }
+.install-step p { color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 0.75rem; }
+
+.code-block {
+  background: #0a0e18;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  color: var(--arc-cyan);
+  overflow-x: auto;
+  position: relative;
+}
+
+.code-block .copy-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(59, 158, 255, 0.15);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  padding: 0.25rem 0.6rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.7rem;
+  font-family: var(--font);
+  transition: background 0.2s, color 0.2s;
+}
+.code-block .copy-btn:hover { background: rgba(59, 158, 255, 0.3); color: var(--text-primary); }
+
+.requirements-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.req-item {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.25rem;
+  text-align: center;
+}
+
+.req-item .req-icon { font-size: 2rem; margin-bottom: 0.5rem; }
+.req-item h4 { font-size: 0.95rem; font-weight: 600; margin-bottom: 0.25rem; }
+.req-item p { color: var(--text-secondary); font-size: 0.8rem; }
+
+/* ─── Config ───────────────────────────────────────── */
+#config { background: var(--bg-secondary); }
+
+.config-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.config-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 2rem;
+}
+
+.config-card h3 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.config-table { width: 100%; }
+
+.config-table tr { border-bottom: 1px solid rgba(26, 39, 64, 0.5); }
+.config-table tr:last-child { border-bottom: none; }
+
+.config-table td {
+  padding: 0.45rem 0;
+  font-size: 0.82rem;
+  vertical-align: top;
+}
+
+.config-table td:first-child {
+  font-family: var(--font-mono);
+  color: var(--arc-cyan);
+  white-space: nowrap;
+  padding-right: 1rem;
+  width: 45%;
+}
+
+.config-table td:last-child { color: var(--text-secondary); }
+
+/* ─── Footer ───────────────────────────────────────── */
+footer {
+  border-top: 1px solid var(--border);
+  padding: 3rem 2rem;
+  text-align: center;
+}
+
+.footer-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.footer-logo {
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: 3px;
+  background: var(--gradient-arc);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 0.5rem;
+}
+
+.footer-tagline {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  margin-bottom: 1.5rem;
+}
+
+.footer-links {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  margin-bottom: 1.5rem;
+}
+
+.footer-links a {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  transition: color 0.2s;
+}
+.footer-links a:hover { color: var(--arc-blue); }
+
+.footer-copy {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+/* ─── Responsive ───────────────────────────────────── */
+@media (max-width: 768px) {
+  .nav-links { display: none; flex-direction: column; position: absolute; top: 64px; left: 0; right: 0; background: var(--bg-primary); border-bottom: 1px solid var(--border); padding: 1rem 2rem; gap: 0.75rem; }
+  .nav-links.open { display: flex; }
+  .nav-toggle { display: block; }
+
+  .hero h1 { font-size: 2.2rem; letter-spacing: 3px; }
+  .hero .tagline { font-size: 1.05rem; }
+  .hero .install-block { flex-direction: column; text-align: center; }
+  .hero .install-block code { white-space: normal; word-break: break-all; font-size: 0.75rem; }
+
+  section { padding: 4rem 1.25rem; }
+  .section-header h2 { font-size: 1.7rem; }
+
+  .feature-grid,
+  .skills-grid,
+  .channel-grid,
+  .vv-grid,
+  .privacy-grid,
+  .config-grid { grid-template-columns: 1fr; }
+
+  .footer-links { flex-direction: column; gap: 0.75rem; }
+}
+
+/* ─── Animations ───────────────────────────────────── */
+.fade-in {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.fade-in.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ Navigation ═══ -->
+<nav id="navbar">
+  <div class="nav-inner">
+    <div class="nav-logo">W.I.N.S.T.O.N.</div>
+    <button class="nav-toggle" onclick="document.querySelector('.nav-links').classList.toggle('open')">&#9776;</button>
+    <ul class="nav-links">
+      <li><a href="#features">Features</a></li>
+      <li><a href="#skills">Skills</a></li>
+      <li><a href="#channels">Channels</a></li>
+      <li><a href="#voice">Voice & Vision</a></li>
+      <li><a href="#privacy">Privacy</a></li>
+      <li><a href="#install">Install</a></li>
+      <li><a href="#config">Config</a></li>
+    </ul>
+  </div>
+</nav>
+
+<!-- ═══ Hero ═══ -->
+<section class="hero">
+  <div class="arc-reactor">
+    <div class="core"></div>
+    <div class="ring ring-1"></div>
+    <div class="ring ring-2"></div>
+    <div class="ring ring-3"></div>
+    <div class="ring ring-4"></div>
+  </div>
+  <div class="subtitle">Wildly Intelligent Network System for Task Operations & Navigation</div>
+  <h1>W.I.N.S.T.O.N.</h1>
+  <p class="tagline">Your private, open-source AI assistant that runs entirely on your Mac. No cloud required. 15+ skills. Voice control. Total privacy.</p>
+
+  <div class="install-block">
+    <code id="install-cmd">curl -sL https://raw.githubusercontent.com/serhatbilge/W.I.N.S.T.O.N/main/install.sh | bash</code>
+    <button class="btn-copy" onclick="copyInstall()">Copy</button>
+  </div>
+
+  <div class="hero-links">
+    <a href="https://github.com/serhatbilge/W.I.N.S.T.O.N" target="_blank">GitHub</a>
+    <a href="#install">Installation Guide</a>
+    <a href="#skills">View All Skills</a>
+  </div>
+
+  <div class="scroll-hint">&darr;</div>
+</section>
+
+<!-- ═══ Features ═══ -->
+<section id="features">
+  <div class="section-inner">
+    <div class="section-header fade-in">
+      <h2>Why <span class="accent">W.I.N.S.T.O.N.</span>?</h2>
+      <p>A locally-running AI assistant with the power of cloud services but none of the privacy trade-offs.</p>
+      <div class="divider"></div>
+    </div>
+
+    <div class="feature-grid">
+      <div class="feature-card fade-in">
+        <div class="feature-icon">&#128274;</div>
+        <h3>100% Private</h3>
+        <p>Runs entirely on your Mac using local LLMs via Ollama. Your data never leaves your machine unless you choose to use cloud providers.</p>
+      </div>
+      <div class="feature-card fade-in">
+        <div class="feature-icon">&#127908;</div>
+        <h3>Voice Control</h3>
+        <p>Full speech-to-text with Whisper and text-to-speech with ElevenLabs, Piper, or macOS. Wake word detection included.</p>
+      </div>
+      <div class="feature-card fade-in">
+        <div class="feature-icon">&#128295;</div>
+        <h3>15+ Skills</h3>
+        <p>Email, web search, file management, calendar, YouTube, smart home, code execution, travel, and more. Fully modular and extensible.</p>
+      </div>
+      <div class="feature-card fade-in">
+        <div class="feature-icon">&#128172;</div>
+        <h3>Multi-Channel</h3>
+        <p>Talk to W.I.N.S.T.O.N. via Telegram, Discord, WhatsApp, the web UI, or the command line. All channels run simultaneously.</p>
+      </div>
+      <div class="feature-card fade-in">
+        <div class="feature-icon">&#128065;</div>
+        <h3>Vision & Screenshots</h3>
+        <p>Analyze images, capture and read your screen, extract text from screenshots using multimodal AI models.</p>
+      </div>
+      <div class="feature-card fade-in">
+        <div class="feature-icon">&#128736;</div>
+        <h3>Fully Open Source</h3>
+        <p>MIT licensed. No API keys required for core functionality. Every dependency is open-source. Extend it however you want.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ Skills ═══ -->
+<section id="skills">
+  <div class="section-inner">
+    <div class="section-header fade-in">
+      <h2>Built-in <span class="accent">Skills</span></h2>
+      <p>W.I.N.S.T.O.N. understands natural language and routes your requests to the right skill automatically.</p>
+      <div class="divider"></div>
+    </div>
+
+    <!-- Communication & Web -->
+    <div class="skills-category fade-in">
+      <h3>Communication & Web</h3>
+      <div class="skills-grid">
+        <div class="skill-card">
+          <div class="skill-icon">&#9993;</div>
+          <h4>Email</h4>
+          <p>Send, read, and search emails via SMTP/IMAP. Works with Gmail, Outlook, and custom servers.</p>
+          <span class="skill-tag">email</span>
+        </div>
+        <div class="skill-card">
+          <div class="skill-icon">&#128269;</div>
+          <h4>Web Search</h4>
+          <p>Search the web via DuckDuckGo. No API key required. Returns titles, descriptions, and links.</p>
+          <span class="skill-tag">web_search</span>
+        </div>
+        <div class="skill-card">
+          <div class="skill-icon">&#127909;</div>
+          <h4>YouTube</h4>
+          <p>Search videos, play them in your browser, get metadata, and fetch transcripts.</p>
+          <span class="skill-tag">youtube</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Productivity -->
+    <div class="skills-category fade-in">
+      <h3>Productivity</h3>
+      <div class="skills-grid">
+        <div class="skill-card">
+          <div class="skill-icon">&#128221;</div>
+          <h4>Notes</h4>
+          <p>Create, list, read, search, and delete text notes. Persistent storage with full-text search.</p>
+          <span class="skill-tag">notes</span>
+        </div>
+        <div class="skill-card">
+          <div class="skill-icon">&#128197;</div>
+          <h4>Calendar</h4>
+          <p>Create events in macOS Calendar, set reminders, get daily briefings, manage to-dos.</p>
+          <span class="skill-tag">calendar</span>
+        </div>
+        <div class="skill-card">
+          <div class="skill-icon">&#128197;</div>
+          <h4>Google Calendar</h4>
+          <p>Full Google Calendar integration. Create, update, delete events. Check availability and book appointments.</p>
+          <span class="skill-tag">google_calendar</span>
+        </div>
+        <div class="skill-card">
+          <div class="skill-icon">&#128203;</div>
+          <h4>Clipboard</h4>
+          <p>Read, copy, and transform clipboard content. History tracking and text transformations built in.</p>
+          <span class="skill-tag">clipboard</span>
+        </div>
+        <div class="skill-card">
+          <div class="skill-icon">&#9200;</div>
+          <h4>Scheduler</h4>
+          <p>Schedule recurring tasks with cron or interval timing. Results delivered to your active channels.</p>
+          <span class="skill-tag">scheduler</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- System & Files -->
+    <div class="skills-category fade-in">
+      <h3>System & Files</h3>
+      <div class="skills-grid">
+        <div class="skill-card">
+          <div class="skill-icon">&#128187;</div>
+          <h4>System Control</h4>
+          <p>Get time, date, system info. Open apps by name. Run whitelisted system commands safely.</p>
+          <span class="skill-tag">system_control</span>
+        </div>
+        <div class="skill-card">
+          <div class="skill-icon">&#128193;</div>
+          <h4>File Manager</h4>
+          <p>Search, list, read, and create files. Get file info and folder sizes. Protected system directories.</p>
+          <span class="skill-tag">file_manager</span>
+        </div>
+        <div class="skill-card">
+          <div class="skill-icon">&#128248;</div>
+          <h4>Screenshot</h4>
+          <p>Capture your screen, analyze it with AI vision, extract text. Custom prompts for analysis.</p>
+          <span class="skill-tag">screenshot</span>
+        </div>
+        <div class="skill-card">
+          <div class="skill-icon">&#128187;</div>
+          <h4>Code Runner</h4>
+          <p>Execute Python code in a sandboxed environment. Blocked dangerous operations, safe math and data processing.</p>
+          <span class="skill-tag">code_runner</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Smart Home & Travel -->
+    <div class="skills-category fade-in">
+      <h3>Smart Home & Travel</h3>
+      <div class="skills-grid">
+        <div class="skill-card">
+          <div class="skill-icon">&#127968;</div>
+          <h4>Smart Home</h4>
+          <p>Control smart home devices via HTTP APIs. Open URLs, manage bookmarks. Home Assistant compatible.</p>
+          <span class="skill-tag">smart_home</span>
+        </div>
+        <div class="skill-card">
+          <div class="skill-icon">&#9992;</div>
+          <h4>Travel</h4>
+          <p>Search flights and hotels via the Amadeus API. Compare prices and get flight details.</p>
+          <span class="skill-tag">travel</span>
+        </div>
+        <div class="skill-card">
+          <div class="skill-icon">&#127911;</div>
+          <h4>Audio Analysis</h4>
+          <p>Transcribe long audio files, summarize meetings, extract action items from recordings.</p>
+          <span class="skill-tag">audio_analysis</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ Channels ═══ -->
+<section id="channels">
+  <div class="section-inner">
+    <div class="section-header fade-in">
+      <h2>Talk From <span class="accent">Anywhere</span></h2>
+      <p>Connect through your favourite messaging platform. All channels run simultaneously with the same brain.</p>
+      <div class="divider"></div>
+    </div>
+
+    <div class="channel-grid">
+      <div class="channel-card fade-in">
+        <div class="ch-header">
+          <div class="ch-icon">&#9992;</div>
+          <h3>Telegram</h3>
+        </div>
+        <p style="color:var(--text-secondary); font-size:0.9rem; margin-bottom:0.5rem;">Full-featured Telegram bot with voice support.</p>
+        <ul>
+          <li>Private DMs &amp; group chat support</li>
+          <li>Voice message transcription (Whisper)</li>
+          <li>Voice replies via ElevenLabs TTS</li>
+          <li>Photo/image analysis</li>
+          <li>Optional user allowlist</li>
+        </ul>
+      </div>
+
+      <div class="channel-card fade-in">
+        <div class="ch-header">
+          <div class="ch-icon">&#128172;</div>
+          <h3>Discord</h3>
+        </div>
+        <p style="color:var(--text-secondary); font-size:0.9rem; margin-bottom:0.5rem;">Discord bot for DMs and guild channels.</p>
+        <ul>
+          <li>DM and @mention support</li>
+          <li>Voice &amp; audio attachment handling</li>
+          <li>Image attachment analysis</li>
+          <li>Native markdown formatting</li>
+          <li>Optional guild allowlist</li>
+        </ul>
+      </div>
+
+      <div class="channel-card fade-in">
+        <div class="ch-header">
+          <div class="ch-icon">&#128242;</div>
+          <h3>WhatsApp</h3>
+        </div>
+        <p style="color:var(--text-secondary); font-size:0.9rem; margin-bottom:0.5rem;">WhatsApp via WAHA &mdash; auto-managed Docker container.</p>
+        <ul>
+          <li>Text, image, and voice messages</li>
+          <li>Auto-starts WAHA Docker container</li>
+          <li>Persistent sessions (no re-scanning QR)</li>
+          <li>WhatsApp-native formatting</li>
+          <li>Optional phone number allowlist</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ Voice & Vision ═══ -->
+<section id="voice">
+  <div class="section-inner">
+    <div class="section-header fade-in">
+      <h2>Voice &amp; <span class="accent">Vision</span></h2>
+      <p>Full speech pipeline and multimodal image understanding.</p>
+      <div class="divider"></div>
+    </div>
+
+    <div class="vv-grid">
+      <div class="vv-card fade-in">
+        <h3>&#127908; Speech-to-Text</h3>
+        <p>Powered by faster-whisper (OpenAI Whisper, optimized). Runs locally on your Mac.</p>
+        <ul class="engine-list">
+          <li>Model sizes <span class="badge badge-local">tiny &rarr; large-v3</span></li>
+          <li>Metal GPU acceleration <span class="badge badge-local">macOS</span></li>
+          <li>Wake word detection <span class="badge badge-local">OpenWakeWord</span></li>
+          <li>Voice Activity Detection <span class="badge badge-local">VAD</span></li>
+        </ul>
+      </div>
+
+      <div class="vv-card fade-in">
+        <h3>&#128264; Text-to-Speech</h3>
+        <p>Three engines with automatic fallback. Always has a voice available.</p>
+        <ul class="engine-list">
+          <li>ElevenLabs <span class="badge badge-cloud">Cloud</span></li>
+          <li>Piper <span class="badge badge-local">Local</span></li>
+          <li>macOS say <span class="badge badge-builtin">Built-in</span></li>
+        </ul>
+      </div>
+
+      <div class="vv-card fade-in">
+        <h3>&#128065; Vision &amp; Screenshots</h3>
+        <p>Analyze images using multimodal LLMs. Two modes for flexibility.</p>
+        <ul class="engine-list">
+          <li>Direct mode <span class="badge badge-local">llama3.2-vision</span></li>
+          <li>Two-step mode <span class="badge badge-local">llava:7b fallback</span></li>
+          <li>Screen capture <span class="badge badge-builtin">macOS native</span></li>
+        </ul>
+      </div>
+
+      <div class="vv-card fade-in">
+        <h3>&#127911; Observer Mode</h3>
+        <p>Background listening for meetings and lectures. Transcribes, summarizes, and extracts action items automatically.</p>
+        <ul class="engine-list">
+          <li>60-second chunk processing <span class="badge badge-local">Whisper</span></li>
+          <li>BlackHole audio capture <span class="badge badge-builtin">macOS</span></li>
+          <li>Auto action extraction <span class="badge badge-local">LLM</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ Privacy & Security ═══ -->
+<section id="privacy">
+  <div class="section-inner">
+    <div class="section-header fade-in">
+      <h2>Privacy &amp; <span class="accent">Security</span></h2>
+      <p>Your data stays on your machine. When using cloud providers, a privacy guard protects your personal information.</p>
+      <div class="divider"></div>
+    </div>
+
+    <div class="privacy-grid">
+      <div class="privacy-card fade-in">
+        <h3>&#128274; Local-First Architecture</h3>
+        <p>All core functionality runs on your Mac via Ollama. No internet connection required for basic operation.</p>
+        <ul>
+          <li>Local LLM inference (Ollama)</li>
+          <li>Local speech recognition (Whisper)</li>
+          <li>Local memory storage (ChromaDB)</li>
+          <li>No telemetry or analytics</li>
+        </ul>
+      </div>
+
+      <div class="privacy-card fade-in">
+        <h3>&#128737; Privacy Guard</h3>
+        <p>When you choose to use cloud LLMs (OpenAI, Anthropic, Gemini), the privacy guard kicks in automatically.</p>
+        <ul>
+          <li>Strips personal data from system prompts</li>
+          <li>Redacts passwords, API keys, credit cards</li>
+          <li>Sanitizes messages before sending to cloud</li>
+          <li>Warns when cloud provider is active</li>
+        </ul>
+      </div>
+
+      <div class="privacy-card fade-in">
+        <h3>&#128737; Safety System</h3>
+        <p>Risk-based action confirmation prevents accidental damage.</p>
+        <ul>
+          <li>SAFE &mdash; auto-approved (time, search, notes)</li>
+          <li>LOW &mdash; logged (system info, screenshots)</li>
+          <li>MEDIUM &mdash; confirmation required (open app, files)</li>
+          <li>HIGH &mdash; always confirms (email, commands)</li>
+          <li>BLOCKED &mdash; never allowed (destructive ops)</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ Installation ═══ -->
+<section id="install">
+  <div class="section-inner">
+    <div class="section-header fade-in">
+      <h2>Get <span class="accent">Started</span></h2>
+      <p>Up and running in under 5 minutes on any Mac.</p>
+      <div class="divider"></div>
+    </div>
+
+    <div class="install-section">
+      <!-- Requirements -->
+      <div class="fade-in" style="margin-bottom: 2rem;">
+        <h3 style="font-size:1.1rem; margin-bottom:0.5rem;">Requirements</h3>
+        <div class="requirements-grid">
+          <div class="req-item">
+            <div class="req-icon">&#128187;</div>
+            <h4>macOS</h4>
+            <p>macOS 12+ (Monterey or later)</p>
+          </div>
+          <div class="req-item">
+            <div class="req-icon">&#129302;</div>
+            <h4>Ollama</h4>
+            <p>Download from <a href="https://ollama.ai" target="_blank">ollama.ai</a></p>
+          </div>
+          <div class="req-item">
+            <div class="req-icon">&#128039;</div>
+            <h4>Python 3.9+</h4>
+            <p>Auto-installed by the setup script</p>
+          </div>
+          <div class="req-item">
+            <div class="req-icon">&#127866;</div>
+            <h4>Homebrew</h4>
+            <p>Auto-installed if missing</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 1 -->
+      <div class="install-step fade-in">
+        <div class="step-num">1</div>
+        <h3>Install Ollama &amp; pull a model</h3>
+        <p>Download Ollama from <a href="https://ollama.ai" target="_blank">ollama.ai</a>, then pull the default model:</p>
+        <div class="code-block">
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+          ollama pull qwen2.5:7b
+        </div>
+      </div>
+
+      <!-- Step 2 -->
+      <div class="install-step fade-in">
+        <div class="step-num">2</div>
+        <h3>Install W.I.N.S.T.O.N.</h3>
+        <p>Run the one-liner install script. It clones the repo, installs dependencies, and sets up everything:</p>
+        <div class="code-block">
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+          curl -sL https://raw.githubusercontent.com/serhatbilge/W.I.N.S.T.O.N/main/install.sh | bash
+        </div>
+        <p style="margin-top: 0.75rem;">Or manually:</p>
+        <div class="code-block">
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+          git clone https://github.com/serhatbilge/W.I.N.S.T.O.N.git ~/W.I.N.S.T.O.N<br>
+          cd ~/W.I.N.S.T.O.N &amp;&amp; bash setup_mac.sh
+        </div>
+      </div>
+
+      <!-- Step 3 -->
+      <div class="install-step fade-in">
+        <div class="step-num">3</div>
+        <h3>Configure (optional)</h3>
+        <p>Edit <code style="color:var(--arc-cyan)">config/settings.yaml</code> to enable channels, set API keys, or customize behavior. The defaults work out of the box.</p>
+      </div>
+
+      <!-- Step 4 -->
+      <div class="install-step fade-in">
+        <div class="step-num">4</div>
+        <h3>Run</h3>
+        <p>Choose your preferred mode:</p>
+        <div class="code-block" style="margin-bottom:0.75rem;">
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+          <span style="color:var(--text-muted)"># Text mode (CLI)</span><br>
+          python -m winston.main --mode text<br><br>
+          <span style="color:var(--text-muted)"># Voice mode</span><br>
+          python -m winston.main --mode voice<br><br>
+          <span style="color:var(--text-muted)"># Server mode (Web UI + all channels)</span><br>
+          python -m winston.main --mode server
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ Configuration ═══ -->
+<section id="config">
+  <div class="section-inner">
+    <div class="section-header fade-in">
+      <h2><span class="accent">Configuration</span> Reference</h2>
+      <p>All settings live in <code style="color:var(--arc-cyan)">config/settings.yaml</code>. Environment variables override YAML values.</p>
+      <div class="divider"></div>
+    </div>
+
+    <div class="config-grid">
+      <div class="config-card fade-in">
+        <h3>&#129302; LLM / Brain</h3>
+        <table class="config-table">
+          <tr><td>model</td><td>Default LLM model (qwen2.5:7b)</td></tr>
+          <tr><td>base_url</td><td>Ollama server URL</td></tr>
+          <tr><td>temperature</td><td>Creativity level (0.0 &ndash; 1.0)</td></tr>
+          <tr><td>max_tokens</td><td>Max response length (2048)</td></tr>
+          <tr><td>vision_model</td><td>Model for image analysis</td></tr>
+          <tr><td>vision_mode</td><td>direct or two-step</td></tr>
+        </table>
+      </div>
+
+      <div class="config-card fade-in">
+        <h3>&#127908; Voice</h3>
+        <table class="config-table">
+          <tr><td>tts.engine</td><td>auto, elevenlabs, piper, macos</td></tr>
+          <tr><td>elevenlabs_api_key</td><td>ElevenLabs API key</td></tr>
+          <tr><td>elevenlabs_voice_id</td><td>Voice ID to use</td></tr>
+          <tr><td>piper_model</td><td>Piper TTS model name</td></tr>
+          <tr><td>piper_speed</td><td>Speech speed (1.0 default)</td></tr>
+        </table>
+      </div>
+
+      <div class="config-card fade-in">
+        <h3>&#128172; Channels</h3>
+        <table class="config-table">
+          <tr><td>telegram.enabled</td><td>Enable Telegram bot</td></tr>
+          <tr><td>telegram.bot_token</td><td>Telegram bot token</td></tr>
+          <tr><td>discord.enabled</td><td>Enable Discord bot</td></tr>
+          <tr><td>discord.bot_token</td><td>Discord bot token</td></tr>
+          <tr><td>whatsapp.enabled</td><td>Enable WhatsApp (WAHA)</td></tr>
+          <tr><td>whatsapp.auto_start_docker</td><td>Auto-start WAHA container</td></tr>
+        </table>
+      </div>
+
+      <div class="config-card fade-in">
+        <h3>&#128274; Privacy</h3>
+        <table class="config-table">
+          <tr><td>input_mode</td><td>text, voice, or hybrid</td></tr>
+          <tr><td>user_name</td><td>How W.I.N.S.T.O.N. addresses you</td></tr>
+          <tr><td>debug</td><td>Enable verbose logging</td></tr>
+          <tr><td>log_file</td><td>Log file path</td></tr>
+          <tr><td>memory.max_context</td><td>Conversation context window</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <div style="text-align:center; margin-top:2rem;" class="fade-in">
+      <p style="color:var(--text-secondary); font-size:0.9rem;">
+        Environment variables follow the pattern <code style="color:var(--arc-cyan)">WINSTON_&lt;SETTING&gt;</code> and override YAML values.<br>
+        Example: <code style="color:var(--arc-cyan)">WINSTON_TELEGRAM_TOKEN=your_token</code>
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ Supported Models ═══ -->
+<section id="models" style="background: var(--bg-secondary);">
+  <div class="section-inner">
+    <div class="section-header fade-in">
+      <h2>Supported <span class="accent">Models</span></h2>
+      <p>Use any Ollama model locally, or connect to cloud providers with automatic privacy protection.</p>
+      <div class="divider"></div>
+    </div>
+
+    <div class="config-grid">
+      <div class="config-card fade-in">
+        <h3>&#127968; Local (Ollama)</h3>
+        <table class="config-table">
+          <tr><td>qwen2.5:7b</td><td>Default &mdash; fast &amp; capable</td></tr>
+          <tr><td>llama3.1:8b</td><td>Meta's latest, great all-rounder</td></tr>
+          <tr><td>mistral:7b</td><td>Strong reasoning &amp; coding</td></tr>
+          <tr><td>deepseek-r1</td><td>Advanced reasoning</td></tr>
+          <tr><td>gemma2:9b</td><td>Google's efficient model</td></tr>
+          <tr><td>phi3:mini</td><td>Microsoft, very lightweight</td></tr>
+          <tr><td>command-r</td><td>Cohere, tool-use optimized</td></tr>
+        </table>
+      </div>
+
+      <div class="config-card fade-in">
+        <h3>&#9729; Cloud (with Privacy Guard)</h3>
+        <table class="config-table">
+          <tr><td>OpenAI</td><td>GPT-4, GPT-3.5-turbo</td></tr>
+          <tr><td>Anthropic</td><td>Claude 4.5 / 4.6 series</td></tr>
+          <tr><td>Google Gemini</td><td>Gemini Pro, Gemini Vision</td></tr>
+        </table>
+        <p style="color:var(--text-muted); font-size:0.8rem; margin-top:0.75rem;">
+          Cloud providers are optional. When used, the Privacy Guard automatically strips personal data from requests.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ Footer ═══ -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-logo">W.I.N.S.T.O.N.</div>
+    <p class="footer-tagline">Wildly Intelligent Network System for Task Operations &amp; Navigation</p>
+    <div class="footer-links">
+      <a href="https://github.com/serhatbilge/W.I.N.S.T.O.N" target="_blank">GitHub</a>
+      <a href="#install">Installation</a>
+      <a href="#skills">Skills</a>
+      <a href="#config">Configuration</a>
+    </div>
+    <p class="footer-copy">MIT License &bull; Built by Serhat Bilge &bull; Powered by open-source AI</p>
+  </div>
+</footer>
+
+<script>
+// ─── Scroll animations ───
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: 0.1 });
+document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+// ─── Navbar shadow on scroll ───
+window.addEventListener('scroll', () => {
+  document.getElementById('navbar').classList.toggle('scrolled', window.scrollY > 20);
+});
+
+// ─── Close mobile menu on link click ───
+document.querySelectorAll('.nav-links a').forEach(a => {
+  a.addEventListener('click', () => document.querySelector('.nav-links').classList.remove('open'));
+});
+
+// ─── Copy install command ───
+function copyInstall() {
+  const cmd = document.getElementById('install-cmd').textContent.trim();
+  navigator.clipboard.writeText(cmd);
+  const btn = document.querySelector('.hero .btn-copy');
+  btn.textContent = 'Copied!';
+  setTimeout(() => btn.textContent = 'Copy', 2000);
+}
+
+// ─── Copy code blocks ───
+function copyCode(btn) {
+  const block = btn.parentElement;
+  const code = block.textContent.replace('Copy', '').replace('Copied!', '').trim();
+  navigator.clipboard.writeText(code);
+  btn.textContent = 'Copied!';
+  setTimeout(() => btn.textContent = 'Copy', 2000);
+}
+</script>
+</body>
+</html>

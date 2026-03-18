@@ -1,0 +1,56 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Environment files (contain real API keys)
+.env
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.claude/
+
+# OS
+.DS_Store
+Thumbs.db
+._*
+
+# Logs
+*.log
+
+# User data (created at runtime)
+.jarvis/
+.winston/
+
+# Conversations & screenshots may contain sensitive data
+screenshots/
+
+# Audio temp files
+*.wav
+*.mp3
+
+# Distribution / Build artifacts
+dist/
+build/
+*.egg-info/
+*.egg
+
+# pytest
+.pytest_cache/
+
+# OpenClaw reference (not part of Winston)
+openclaw-main/
+
+# Misc junk
+=1.6.0
+firebase-debug.log
+rename_winston.py

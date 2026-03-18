@@ -1,0 +1,103 @@
+# ╔══════════════════════════════════════════════════╗
+# ║          W.I.N.S.T.O.N. Configuration              ║
+# ╚══════════════════════════════════════════════════╝
+
+# ── General ──────────────────────────────────────────
+name: W.I.N.S.T.O.N.
+user_name: Sir
+input_mode: text   # text | voice | hybrid
+
+# ── LLM / Brain ──────────────────────────────────────
+ollama:
+  model: qwen2.5:7b
+  base_url: http://localhost:11434
+  temperature: 0.7
+  max_tokens: 2048
+
+# ─────────────────────────────────────────────────────
+# 🎙️  Voice / Text-to-Speech
+# ─────────────────────────────────────────────────────
+# engine options:
+#   auto        → picks the best available (ElevenLabs → Piper → macOS say)
+#   elevenlabs  → cloud, best quality  (needs api key below)
+#   piper       → local, offline, fast (needs `brew install piper-tts`)
+#   macos       → built-in macOS say (always works, sounds robotic)
+
+tts:
+  engine: auto
+
+  # ── ElevenLabs (Option 1 — best quality) ──────────
+  # Sign up free at https://elevenlabs.io
+  # Copy your API key from Profile → API Key
+  elevenlabs_api_key: ""          # ← paste your key here, or use WINSTON_ELEVENLABS_KEY env var
+  elevenlabs_voice_id: "JBFqnCBsd6RMkjVDRZzb"   # George (warm, British storyteller)
+  # Other good voices:
+  #   pNInz6obpgDQGcFmaJgB  → Adam (American)
+  #   EXAVITQu4vr4xnSDxMaL  → Bella (American female)
+  elevenlabs_model: "eleven_turbo_v2"
+
+  # ── Piper (Option 2 — local / offline) ────────────
+  # Install: brew install piper-tts
+  # Model is auto-downloaded on first run
+  piper_model: "en_US-lessac-high"
+  piper_speed: 1.0
+
+# ── Channels ─────────────────────────────────────────
+channels:
+  telegram:
+    enabled: true
+    bot_token: ""                 # set via WINSTON_TELEGRAM_TOKEN env var
+    # allowed_users: [123456789]  # optional: restrict to specific user IDs
+
+  discord:
+    enabled: false
+    bot_token: ""                 # set via WINSTON_DISCORD_TOKEN env var
+    # allowed_guilds: [123456789] # optional: restrict to specific guilds
+
+  whatsapp:
+    enabled: false
+    waha_url: "http://localhost:3000"  # WAHA Docker container URL
+    waha_api_key: ""                   # auto-generated if left empty
+    session_name: "default"
+    webhook_port: 3001
+    auto_start_docker: true            # auto-start WAHA Docker container
+    # allowed_numbers: ["+491234567890"]  # optional: restrict to specific numbers
+
+# ── Memory ───────────────────────────────────────────
+memory:
+  max_context_messages: 20
+
+# ── Email ────────────────────────────────────────────
+# email:
+#   smtp_server: smtp.gmail.com
+#   imap_server: imap.gmail.com
+#   email: you@gmail.com
+#   password: ""                  # use WINSTON_EMAIL_PASSWORD env var
+
+# ── Travel / Flights (Amadeus API) ─────────────────
+# Sign up free at https://developers.amadeus.com
+# amadeus:
+#   api_key: ""              # or set WINSTON_AMADEUS_KEY env var
+#   api_secret: ""           # or set WINSTON_AMADEUS_SECRET env var
+#   environment: "test"      # "test" for sandbox, "production" for live
+
+# ── Google Calendar ──────────────────────────────────
+# Download OAuth credentials from Google Cloud Console
+# google_calendar:
+#   enabled: false
+#   credentials_file: ""     # path to OAuth2 credentials JSON
+#   token_file: "~/.winston/google_calendar_token.json"
+#   calendar_id: "primary"
+
+# ── Cloud LLM Providers ────────────────────────────────
+# Set API keys here OR via environment variables (env vars take priority).
+# Once a key is set, switch models via the web UI or /model command.
+# Available OpenAI models: gpt-5.4-pro, gpt-5.4, gpt-5.2, gpt-4o, etc.
+# providers:
+#   openai_api_key: ""           # or set OPENAI_API_KEY env var
+#   anthropic_api_key: ""        # or set ANTHROPIC_API_KEY env var
+#   gemini_api_key: ""           # or set GEMINI_API_KEY env var
+
+# ── Logging ──────────────────────────────────────────
+log_file: ~/.winston/winston.log
+debug: false
