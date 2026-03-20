@@ -53,7 +53,7 @@ class InteractiveBrowserAgent:
         self.brain = brain
         self.safety = safety
         self.browser = browser_skill
-        self.max_steps = 40
+        self.max_steps = 60
         self._checkout_phase = CheckoutPhase.NAVIGATE
         self._is_shopping_task = False
         self._cart_items: list = []  # Track items added to cart
@@ -70,7 +70,11 @@ class InteractiveBrowserAgent:
             "## ACTIONS (output exactly ONE JSON per step):\n"
             "- open_page: Navigate to URL. {\"skill\":\"browser\",\"parameters\":{\"action\":\"open_page\",\"url\":\"https://...\"}}\n"
             "- snapshot: Re-capture page accessibility tree. {\"skill\":\"browser\",\"parameters\":{\"action\":\"snapshot\"}}\n"
+            "- snapshot_interactive: COMPACT snapshot — only interactive elements. Use for complex/large pages. {\"skill\":\"browser\",\"parameters\":{\"action\":\"snapshot_interactive\"}}\n"
             "- click_ref: Click element by ref. {\"skill\":\"browser\",\"parameters\":{\"action\":\"click_ref\",\"ref\":\"e5\"}}\n"
+            "- force_click_ref: Click element by ref, bypassing overlay checks. Uses real browser mouse events "
+            "(works with React/Angular). {\"skill\":\"browser\",\"parameters\":{\"action\":\"force_click_ref\",\"ref\":\"e5\"}}\n"
+            "  - Use when click_ref fails due to an overlay intercepting the click.\n"
             "- type_ref: Type into input. {\"skill\":\"browser\",\"parameters\":{\"action\":\"type_ref\",\"ref\":\"e3\",\"value\":\"...\",\"submit\":true}}\n"
             "  - Add \"slow\":true for autocomplete/search inputs that need char-by-char typing.\n"
             "- select_ref: Select dropdown option. {\"skill\":\"browser\",\"parameters\":{\"action\":\"select_ref\",\"ref\":\"e7\",\"value\":\"...\"}}\n"
@@ -87,14 +91,24 @@ class InteractiveBrowserAgent:
             "- switch_tab: Switch browser tab. {\"skill\":\"browser\",\"parameters\":{\"action\":\"switch_tab\",\"index\":1}}\n"
             "  - Or by URL: {\"skill\":\"browser\",\"parameters\":{\"action\":\"switch_tab\",\"url\":\"booking\"}}\n"
             "  - No params: lists all open tabs.\n"
+            "- batch: Execute MULTIPLE actions in sequence (reduces round-trips):\n"
+            "  {\"skill\":\"browser\",\"parameters\":{\"action\":\"batch\",\"actions\":[\n"
+            "    {\"action\":\"type_ref\",\"ref\":\"e3\",\"value\":\"hello\"},\n"
+            "    {\"action\":\"click_ref\",\"ref\":\"e5\"},\n"
+            "    {\"action\":\"wait_for\",\"load_state\":\"networkidle\"}\n"
+            "  ]}}\n"
+            "  Perfect for: fill form + submit, or type + wait + click suggestion.\n"
             "- screenshot_page: Take screenshot. {\"skill\":\"browser\",\"parameters\":{\"action\":\"screenshot_page\"}}\n"
+            "- screenshot_labels: Screenshot with ref labels overlaid. {\"skill\":\"browser\",\"parameters\":{\"action\":\"screenshot_labels\"}}\n"
             "- extract_text: Get page text. {\"skill\":\"browser\",\"parameters\":{\"action\":\"extract_text\"}}\n\n"
             "## Legacy actions (still available):\n"
             "- click_text: Click by visible text. {\"skill\":\"browser\",\"parameters\":{\"action\":\"click_text\",\"text\":\"...\"}}\n"
             "- click: Click by CSS selector. {\"skill\":\"browser\",\"parameters\":{\"action\":\"click\",\"selector\":\"...\"}}\n"
             "- fill: Type into input by CSS. {\"skill\":\"browser\",\"parameters\":{\"action\":\"fill\",\"selector\":\"...\",\"value\":\"...\"}}\n"
             "- select_option: Select by CSS. {\"skill\":\"browser\",\"parameters\":{\"action\":\"select_option\",\"selector\":\"...\",\"value\":\"...\"}}\n"
-            "- run_script: Run JS. {\"skill\":\"browser\",\"parameters\":{\"action\":\"run_script\",\"script\":\"...\"}}\n\n"
+            "- run_script: Run JS on page. {\"skill\":\"browser\",\"parameters\":{\"action\":\"run_script\",\"script\":\"...\"}}\n"
+            "  - With ref (evaluate on element): {\"skill\":\"browser\",\"parameters\":{\"action\":\"run_script\",\"ref\":\"e5\",\"script\":\"el => el.click()\"}}\n"
+            "  - When ref is provided, the script receives the DOM element as first argument.\n\n"
             "## CRITICAL RULES:\n"
             "1. READ the snapshot carefully. ONLY interact with elements that have [ref=eN] markers.\n"
             "2. PREFER ref-based actions (click_ref, type_ref, select_ref) over CSS selectors.\n"
@@ -109,6 +123,26 @@ class InteractiveBrowserAgent:
             "11. If a link opens a new tab, you will automatically switch to it. Use switch_tab to go back if needed.\n"
             "12. If you notice you are repeating the same action, STOP and try a completely different approach.\n"
             "13. After clicking a button that triggers navigation, use wait_for with load_state:networkidle before taking a snapshot.\n"
+            "14. Use batch action to combine related actions (e.g. fill + submit, or type + wait + click).\n"
+            "15. If the snapshot says TRUNCATED or the page is very large, use snapshot_interactive for a compact view.\n"
+            "16. Elements in iframes also have refs. Interact with them normally using click_ref/type_ref.\n"
+            "17. Error messages tell you WHAT TO DO. Read them carefully and follow the guidance.\n"
+            "18. READ-ONLY tasks: If the task only asks to READ information (titles, prices, headlines, etc.), "
+            "use extract_text or read the snapshot — do NOT click links unless navigation is needed. "
+            "The snapshot and extract_text already contain the text you need.\n"
+            "19. AVOID external links: Never click share buttons (Facebook, Twitter, email) or ad links. "
+            "Stay on the target site. If you accidentally leave, use switch_tab or open_page to go back.\n"
+            "20. THINK before acting: Before each action, consider if you already have the answer "
+            "in the current snapshot or extracted text. If yes, respond with the answer directly.\n"
+            "21. OVERLAYS/POPUPS: If click_ref fails because an overlay blocks it:\n"
+            "   - BEST: use run_script with ref: {\"action\":\"run_script\",\"ref\":\"eN\",\"script\":\"el => { el.click(); return true }\"} "
+            "— this executes directly on the element, completely bypassing any overlay.\n"
+            "   - OK for buttons (not radios): force_click_ref dispatches at coordinates. Works if no overlay at those coords.\n"
+            "   - ALT: dismiss overlay via close button, or use run_script to remove the blocking element.\n"
+            "22. E-COMMERCE NAVIGATION: On product listing pages, use run_script to discover product links/prices "
+            "in the DOM, then open_page to navigate directly. For product configurators with radio buttons, "
+            "use run_script with ref to click them: {\"action\":\"run_script\",\"ref\":\"eN\",\"script\":\"el => { el.click(); return el.checked }\"} "
+            "This fires the click event FROM the element itself, properly triggering React/Angular event delegation.\n"
         )
 
         if self._is_shopping_task:
@@ -219,7 +253,7 @@ class InteractiveBrowserAgent:
             )
 
             # Keep history compact: task + last 6 exchanges
-            trimmed = history[:1] + history[-6:] if len(history) > 7 else history
+            trimmed = history[:1] + history[-10:] if len(history) > 11 else history
 
             # Use system_override to skip brain's default system prompt + all skill descriptions
             response = self.brain.think(
@@ -227,6 +261,7 @@ class InteractiveBrowserAgent:
                 conversation_history=trimmed,
                 system_override=system_prompt
             )
+            logger.info(f"LLM response (first 300 chars): {response[:300]}")
             history.append({"role": "assistant", "content": response})
 
             skill_calls = self.brain.parse_skill_calls(response)
@@ -255,8 +290,18 @@ class InteractiveBrowserAgent:
 
             # No skill calls = task complete or LLM gave up
             if not skill_calls:
+                stripped = self.brain.strip_skill_blocks(response).strip()
+                # If response is too short/garbage, it's a malformed LLM response, not completion
+                if len(stripped) < 20 and step < self.max_steps - 2:
+                    logger.warning(f"Malformed LLM response (len={len(stripped)}), retrying step")
+                    history.append({"role": "user", "content": (
+                        "[System] Your response was not valid. Output EXACTLY ONE JSON action per step. "
+                        "Example: {\"skill\":\"browser\",\"parameters\":{\"action\":\"snapshot\"}}"
+                    )})
+                    last_page_structure = ""
+                    continue
                 logger.info("No skill calls — task complete or needs input.")
-                final_response = self.brain.strip_skill_blocks(response).strip()
+                final_response = stripped
                 if not final_response:
                     final_response = "Browser task completed."
 
@@ -275,15 +320,27 @@ class InteractiveBrowserAgent:
             logger.info(f"Action: {parameters}")
 
             # ── Simple loop detection ──
-            action_sig = json.dumps(parameters, sort_keys=True)
-            self._global_action_counts[action_sig] = self._global_action_counts.get(action_sig, 0) + 1
-            count = self._global_action_counts[action_sig]
+            # Exclude read-only/observation actions from loop detection —
+            # these are safe to repeat and don't indicate the agent is stuck.
+            action_name = parameters.get("action", "")
+            READ_ONLY_ACTIONS = {
+                "extract_text", "snapshot", "snapshot_interactive", "screenshot_page",
+                "screenshot_labels", "get_page_structure", "switch_tab", "wait_for",
+                "scroll",
+            }
+            if action_name not in READ_ONLY_ACTIONS:
+                action_sig = json.dumps(parameters, sort_keys=True)
+                self._global_action_counts[action_sig] = self._global_action_counts.get(action_sig, 0) + 1
+                count = self._global_action_counts[action_sig]
+            else:
+                count = 0  # Never trigger loop detection for read-only actions
 
             # Block open_page to the same URL we're already on
             if parameters.get("action") == "open_page":
                 target = (parameters.get("url") or "").rstrip("/").lower()
                 current = (self.browser.current_url or "").rstrip("/").lower()
-                if target and current and (target == current or target in current or current in target):
+                if target and current and target == current:
+                    logger.info(f"  BLOCKED: Already on {current}")
                     history.append({"role": "user", "content": (
                         f"[System] BLOCKED: You are already on {self.browser.current_url}. "
                         "Do NOT navigate to the same page. Try: scroll down, click a different "
@@ -374,14 +431,15 @@ class InteractiveBrowserAgent:
 
                 if result.success:
                     consecutive_failures = 0
+                    current_url = self.browser.current_url or "unknown"
+                    logger.info(f"  ✓ {action_name}: {result.message[:200]}")
                     obs = f"[Result] OK: {result.message}"
 
                     # Auto-snapshot after page-changing actions (including ref-based)
                     page_changing = (
                         "open_page", "click", "click_text", "click_ref",
-                        "select_option", "select_ref",
+                        "force_click_ref", "select_option", "select_ref",
                     )
-                    action_name = parameters.get("action", "")
                     # type_ref with submit also changes the page
                     is_type_submit = action_name == "type_ref" and parameters.get("submit")
 
@@ -389,24 +447,33 @@ class InteractiveBrowserAgent:
                         time.sleep(1.5)  # Wait for dynamic content to load
                         try:
                             last_page_structure = self.browser.snapshot()
-                            obs += f"\n\n{last_page_structure}"
+                            obs += f"\n\nCurrent URL: {self.browser.current_url}\n{last_page_structure}"
                         except Exception:
                             try:
                                 last_page_structure = self.browser.extract_page_structure()
-                                obs += f"\n\n{last_page_structure}"
+                                obs += f"\n\nCurrent URL: {self.browser.current_url}\n{last_page_structure}"
                             except Exception:
                                 last_page_structure = ""
                     elif action_name == "snapshot":
                         last_page_structure = ""
+                    elif action_name == "extract_text":
+                        # Truncate long extract_text results to prevent LLM context overflow
+                        text_data = result.data.get("text", "") if result.data else ""
+                        if len(text_data) > 3000:
+                            text_data = text_data[:3000] + "\n\n[...TRUNCATED — use snapshot for structured view]"
+                        obs = f"[Extracted text from {current_url}]:\n{text_data}"
+                        obs += "\n\nREMINDER: If you already have the answer in this text, respond with plain text now. Do NOT click more links."
+                        last_page_structure = ""
                     else:
                         last_page_structure = ""
 
-                    if result.data and action_name not in ("open_page", "click", "click_text", "click_ref", "snapshot"):
+                    if result.data and action_name not in ("open_page", "click", "click_text", "click_ref", "snapshot", "extract_text"):
                         obs += f"\nData: {json.dumps(result.data)[:500]}"
 
                     history.append({"role": "user", "content": obs})
                 else:
                     consecutive_failures += 1
+                    logger.info(f"  ✗ {action_name}: {result.message[:200]}")
                     obs = f"[Result] FAILED: {result.message}"
 
                     if "Navigation failed" in result.message or "error page" in result.message:

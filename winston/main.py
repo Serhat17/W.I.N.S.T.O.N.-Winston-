@@ -30,6 +30,7 @@ from winston.core.safety import SafetyGuard, RiskLevel, RiskOverride
 from winston.core.pipeline import (
     parse_override, detect_fallback_calls, refine_response,
     finalize_response, compact_memory, AUTO_APPROVE_SKILLS,
+    is_shopping_intent, SHOP_PROFILES,
 )
 from winston.skills.base import SkillResult
 from winston.skills.email_skill import EmailSkill
@@ -345,6 +346,107 @@ class Winston:
         override, sanitized = parse_override(sanitized)
         if override != RiskOverride.NONE:
             logger.info(f"{override.name} mode activated for this request")
+
+        # ── Shopping intent detection ──
+        # If user says "bestell Bananen bei Flink" (no "mach" prefix needed),
+        # auto-route to the InteractiveBrowserAgent with the right shop profile.
+        shop_key = is_shopping_intent(sanitized)
+        if shop_key and "browser" in self._skills:
+            import os
+            profile_dir, shop_url, shop_name = SHOP_PROFILES[shop_key]
+            profile_dir = os.path.expanduser(profile_dir)
+            has_profile = os.path.isdir(profile_dir) and os.listdir(profile_dir)
+
+            if not has_profile:
+                self.memory.add_message("user", sanitized)
+                response = (
+                    f"Ich kann bei {shop_name} bestellen, aber du musst dich zuerst einloggen.\n"
+                    f"Führe einmal aus: python tests/flink_login_setup.py\n"
+                    f"Dann bin ich bereit!"
+                )
+                self.memory.add_message("assistant", response)
+                return response
+
+            logger.info(f"Shopping intent detected → {shop_name} (profile: {profile_dir})")
+
+            # Swap in a BrowserSkill with the persistent profile
+            from winston.core.browser_agent import InteractiveBrowserAgent
+            browser_with_profile = BrowserSkill(
+                headless=False,
+                user_data_dir=profile_dir,
+            )
+
+            # Send progress update if on a channel (e.g. Telegram)
+            if channel and hasattr(channel, "send_message") and hasattr(channel, "_default_chat_id"):
+                try:
+                    import asyncio
+                    loop = asyncio.get_event_loop()
+                    if loop.is_running():
+                        asyncio.ensure_future(
+                            channel.send_message(
+                                channel._default_chat_id,
+                                f"🛒 Einkauf bei {shop_name} gestartet — ich öffne den Browser..."
+                            )
+                        )
+                except Exception:
+                    pass
+
+            # Build the shopping task prompt
+            task = (
+                f"Du bist auf {shop_url} und eingeloggt. "
+                f"Deine Adresse und Liefergebiet sind bereits gespeichert.\n\n"
+                f"AUFTRAG vom Benutzer: {sanitized}\n\n"
+                f"VORGEHENSWEISE:\n"
+                f"1. Snapshot machen um die aktuelle Seite zu sehen.\n"
+                f"2. Cookie-Banner akzeptieren falls vorhanden.\n"
+                f"3. Für jedes gewünschte Produkt: Suchfunktion nutzen, Produkt finden, '+' Button klicken.\n"
+                f"4. Am Ende: Warenkorb-Icon oben rechts klicken (NICHT open_page zu /cart/).\n"
+                f"5. Screenshot machen und berichten welche Produkte im Warenkorb sind + Gesamtpreis.\n\n"
+                f"KRITISCHE REGELN:\n"
+                f"- NIEMALS open_page zu /cart/ oder /checkout/ benutzen bei SPAs!\n"
+                f"- NICHT zur Kasse gehen oder bestellen.\n"
+                f"- Nutze click_ref für Buttons.\n"
+                f"- Nutze die Suchfunktion um Produkte zu finden.\n"
+                f"- Snapshot häufig nehmen.\n"
+                f"- Popups/Banner sofort schließen."
+            )
+
+            self.memory.add_message("user", sanitized)
+            agent = InteractiveBrowserAgent(
+                self.brain, self.safety, browser_with_profile
+            )
+            # Pre-navigate to the shop
+            browser_with_profile._ensure_browser()
+            browser_with_profile._page.goto(shop_url, timeout=30000)
+            import time
+            time.sleep(2)
+
+            response = agent.execute_task(
+                user_input=task,
+                override=RiskOverride.AUTONOMOUS,
+                channel=channel,
+                confirm_callback=self._confirm_action,
+            )
+
+            # Save order to shopping history
+            try:
+                if "shopping" in self._skills:
+                    self._skills["shopping"].execute(
+                        action="save_order",
+                        shop=shop_name.lower(),
+                        order_data={"items": [], "notes": response[:500], "total": None},
+                    )
+            except Exception:
+                pass
+
+            # Cleanup browser
+            try:
+                browser_with_profile.cleanup()
+            except Exception:
+                pass
+
+            self.memory.add_message("assistant", response)
+            return response
 
         # Add user message to memory
         self.memory.add_message("user", sanitized)
@@ -800,12 +902,27 @@ def main():
     """Entry point for W.I.N.S.T.O.N."""
     import argparse
 
-    parser = argparse.ArgumentParser(description="W.I.N.S.T.O.N. - AI Assistant")
+    parser = argparse.ArgumentParser(
+        description="W.I.N.S.T.O.N. - AI Assistant",
+        usage="winston [command] [options]\n\n"
+              "Commands:\n"
+              "  (none)     Start in text chat mode (default)\n"
+              "  server     Start web UI + Telegram + Discord\n"
+              "  voice      Start with microphone + speaker\n"
+              "  hybrid     Text + voice combined\n"
+              "  setup      Run the interactive setup wizard\n",
+    )
+    parser.add_argument(
+        "command",
+        nargs="?",
+        default=None,
+        help=argparse.SUPPRESS,
+    )
     parser.add_argument(
         "--mode",
         choices=["text", "voice", "hybrid", "server"],
         default=None,
-        help="Input mode: text, voice, hybrid, or server (web UI for phone access)",
+        help="Input mode (alternative to positional command)",
     )
     parser.add_argument(
         "--model",
@@ -825,6 +942,11 @@ def main():
         help="Enable debug logging",
     )
     parser.add_argument(
+        "--setup",
+        action="store_true",
+        help="Run the interactive setup wizard",
+    )
+    parser.add_argument(
         "--port",
         type=int,
         default=8000,
@@ -832,6 +954,26 @@ def main():
     )
 
     args = parser.parse_args()
+
+    # Handle positional command: winston server, winston voice, winston setup
+    valid_commands = {"server", "voice", "hybrid", "text", "setup"}
+    if args.command:
+        if args.command in valid_commands:
+            if args.command == "setup":
+                args.setup = True
+            else:
+                args.mode = args.command
+        else:
+            parser.error(f"Unknown command '{args.command}'. Use: {', '.join(sorted(valid_commands))}")
+
+    # Setup wizard (explicit --setup or first run)
+    from winston.setup_wizard import run_wizard, should_show_wizard
+    if args.setup or should_show_wizard():
+        chosen_mode = run_wizard()
+        if args.setup:
+            return  # --setup only runs the wizard
+        if not args.mode:
+            args.mode = chosen_mode
 
     # Load config
     config = load_config(args.config)

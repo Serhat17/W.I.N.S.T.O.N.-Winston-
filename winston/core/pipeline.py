@@ -77,11 +77,45 @@ SHOPPING_TRIGGERS_EN = [
     "order again", "same order",
 ]
 
+# Known shop profiles — maps shop keywords to persistent browser profile dirs.
+# Each entry: keyword → (profile_dir, shop_url, display_name)
+SHOP_PROFILES = {
+    "flink": (
+        "~/.winston/browser/flink/user-data",
+        "https://www.goflink.com/shop/de-DE/",
+        "Flink",
+    ),
+    "goflink": (
+        "~/.winston/browser/flink/user-data",
+        "https://www.goflink.com/shop/de-DE/",
+        "Flink",
+    ),
+}
+
 # Summarizer prompt used for context compaction
 SUMMARIZER_PROMPT = "You are a concise summarizer. Output only the summary."
 
 
 # ── Functions ─────────────────────────────────────────────────────────
+
+
+def is_shopping_intent(user_input: str) -> Optional[str]:
+    """
+    Detect if the user wants to order groceries / shop online.
+
+    Returns the matched shop key (e.g. 'flink') or None.
+    """
+    low = user_input.lower()
+    has_shopping = any(kw in low for kw in SHOPPING_TRIGGERS_DE + SHOPPING_TRIGGERS_EN)
+    if not has_shopping:
+        return None
+    # Check if a known shop is mentioned
+    for shop_key in SHOP_PROFILES:
+        if shop_key in low:
+            return shop_key
+    # Default to flink if shopping intent but no specific shop mentioned
+    return "flink"
+
 
 def parse_override(sanitized: str) -> tuple:
     """

@@ -34,6 +34,7 @@ from winston.security.rate_limiter import RateLimiter
 from winston.core.pipeline import (
     parse_override, detect_fallback_calls, refine_response,
     finalize_response, compact_memory, AUTO_APPROVE_SKILLS,
+    is_shopping_intent, SHOP_PROFILES,
 )
 from winston.skills.base import SkillResult
 from winston.skills.email_skill import EmailSkill
@@ -791,6 +792,54 @@ class WinstonServer:
         override, sanitized = parse_override(sanitized)
         if override != RiskOverride.NONE:
             logger.info(f"{override.name} mode activated for REST request")
+
+        # ── Shopping intent detection (same as main.py) ──
+        shop_key = is_shopping_intent(sanitized)
+        if shop_key and "browser" in self.skills:
+            import os as _os
+            from winston.skills.browser_skill import BrowserSkill
+            from winston.core.browser_agent import InteractiveBrowserAgent
+            profile_dir, shop_url, shop_name = SHOP_PROFILES[shop_key]
+            profile_dir = _os.path.expanduser(profile_dir)
+            has_profile = _os.path.isdir(profile_dir) and _os.listdir(profile_dir)
+            if not has_profile:
+                resp = (
+                    f"Ich kann bei {shop_name} bestellen, aber du musst dich zuerst einloggen.\n"
+                    f"Führe einmal aus: python tests/flink_login_setup.py"
+                )
+                self.memory.add_message("user", sanitized)
+                self.memory.add_message("assistant", resp)
+                if return_dict:
+                    return {"message": resp, "skill_results": [], "data": []}
+                return resp
+
+            logger.info(f"Shopping intent detected → {shop_name}")
+            browser_with_profile = BrowserSkill(headless=False, user_data_dir=profile_dir)
+            task = (
+                f"Du bist auf {shop_url} und eingeloggt. "
+                f"Adresse und Liefergebiet sind gespeichert.\n\n"
+                f"AUFTRAG: {sanitized}\n\n"
+                f"REGELN: Suchfunktion nutzen, click_ref für Buttons, "
+                f"NIEMALS open_page zu /cart/. Am Ende Warenkorb-Icon klicken, "
+                f"Screenshot + Bericht."
+            )
+            self.memory.add_message("user", sanitized)
+            browser_with_profile._ensure_browser()
+            browser_with_profile._page.goto(shop_url, timeout=30000)
+            import time as _time
+            _time.sleep(2)
+            agent = InteractiveBrowserAgent(self.brain, self.safety, browser_with_profile)
+            resp = agent.execute_task(
+                user_input=task, override=RiskOverride.AUTONOMOUS, channel=channel,
+            )
+            try:
+                browser_with_profile.cleanup()
+            except Exception:
+                pass
+            self.memory.add_message("assistant", resp)
+            if return_dict:
+                return {"message": resp, "skill_results": [], "data": []}
+            return resp
 
         # Auto-capture memorable information
         self.memory.auto_capture(sanitized)

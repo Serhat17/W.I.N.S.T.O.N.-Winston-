@@ -52,12 +52,12 @@ from winston.core.browser_agent import InteractiveBrowserAgent
 def main():
     print("\n" + "=" * 60)
     print("  BROWSER AGENT TEST: Apple MacBook Pro Max Config")
-    print("  Using: OpenAI API (gpt-4o)")
+    print("  Using: OpenAI API (gpt-5.2)")
     print("=" * 60 + "\n")
 
     config = load_config()
     brain = Brain(config)
-    brain.change_model("gpt-4o")
+    brain.change_model("gpt-5.2")
     print(f"✓ Brain initialized — provider: {brain.get_current_provider()}")
 
     safety = SafetyGuard(require_confirmation=True)
@@ -69,15 +69,37 @@ def main():
     print("✓ InteractiveBrowserAgent created")
 
     task = (
-        "Go to https://www.apple.com/shop/buy-mac/macbook-pro and select the most expensive "
-        "MacBook Pro model available. On the configuration page, upgrade EVERY option to the "
-        "maximum/most expensive choice: chip, CPU cores, GPU cores, RAM, storage, etc. "
-        "After configuring everything to the max, click 'Add to Bag'. "
-        "Once the item is in the bag, go to the bag/cart page and take a screenshot. "
-        "Then report the final configuration and total price as plain text. "
-        "Do NOT proceed to checkout or payment. "
-        "IMPORTANT: If clicking a link doesn't navigate, use run_script to find the actual "
-        "link URL from the DOM, then use open_page to go there directly."
+        "Configure the most expensive MacBook Pro on apple.com and add it to the bag.\n\n"
+        "STEP-BY-STEP PLAN:\n"
+        "1. open_page https://www.apple.com/shop/buy-mac/macbook-pro\n"
+        "2. Use run_script to find config links matching /shop/buy-mac/macbook-pro/. Pick the most expensive.\n"
+        "3. open_page to the config page URL.\n"
+        "4. Snapshot the page. For EACH option group (Size, Color, Display, Chip, sub-Chip, Memory, Storage):\n"
+        "   Find the most expensive radio button ref and click it with:\n"
+        "   {\"action\":\"run_script\",\"ref\":\"eN\",\"script\":\"el => { el.click(); return el.checked }\"}\n"
+        "5. After the main config options, scroll down. There will be more sections:\n"
+        "   - Software extras (Final Cut Pro, Logic Pro) — select the most expensive options.\n"
+        "   - Trade-in — select 'No trade-in'.\n"
+        "   - Payment method — select 'Buy' (full price). May start disabled; scroll + snapshot until enabled.\n"
+        "   - AppleCare — select the most expensive AppleCare option when enabled.\n"
+        "6. After ALL sections are completed, 'Add to Bag' button will appear in the snapshot.\n"
+        "   Take snapshot_interactive, find the 'Add to Bag' button ref.\n"
+        "   Click it using click_ref (NOT page-level run_script without ref).\n"
+        "7. CRITICAL WAIT: After clicking Add to Bag, you MUST do these steps IN ORDER:\n"
+        "   a. wait_for load_state:networkidle\n"
+        "   b. wait_for delay:5000\n"
+        "   c. snapshot to check the page — look for 'bag' badge, confirmation, or item count.\n"
+        "8. ONLY after confirming Add to Bag succeeded: open_page https://www.apple.com/shop/bag\n"
+        "9. snapshot and screenshot_page. Report the cart contents and total price.\n\n"
+        "CRITICAL RULES:\n"
+        "- For radio buttons, ALWAYS use run_script with ref: el => { el.click(); return el.checked }\n"
+        "- For 'Add to Bag' button, use click_ref with the ref from the snapshot. Do NOT use page-level JS.\n"
+        "- Do NOT go to /shop/bag until AFTER Add to Bag is clicked AND you have waited for networkidle.\n"
+        "- Do NOT proceed to checkout.\n"
+        "- Take snapshots frequently to see updated/newly-enabled options.\n"
+        "- If the bag is empty after navigating to /shop/bag, the Add to Bag click did not work.\n"
+        "  Go back to the config page, find the Add to Bag ref, and try clicking it again differently.\n"
+        "- Some sections enable only after previous sections are completed — scroll and snapshot to check."
     )
 
     print(f"\n📋 Task: {task}\n")

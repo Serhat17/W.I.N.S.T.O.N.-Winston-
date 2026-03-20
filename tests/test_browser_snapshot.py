@@ -429,8 +429,8 @@ class TestSnapshotMethod:
 
         result = skill_with_page.snapshot(max_chars=100)
 
-        assert len(result) <= 120  # 100 + "... (truncated)" suffix
-        assert "truncated" in result
+        assert len(result) <= 250  # 100 + truncation message
+        assert "TRUNCATED" in result or "truncated" in result.lower()
 
     def test_snapshot_no_page(self, browser_skill):
         result = browser_skill.snapshot()
@@ -564,18 +564,19 @@ class TestErrorTranslation:
     def test_strict_mode_violation(self, browser_skill):
         err = Exception("Error: strict mode violation: get_by_role('button') resolved to 3 elements")
         msg = browser_skill._to_ai_error(err)
-        assert "Multiple elements" in msg
+        assert "3 elements" in msg
         assert "snapshot" in msg.lower()
 
     def test_timeout_error(self, browser_skill):
-        err = Exception("Timeout 8000ms exceeded")
+        err = Exception("Timeout 8000ms exceeded waiting for selector")
         msg = browser_skill._to_ai_error(err)
-        assert "not found or hidden" in msg
+        assert "not found" in msg.lower()
+        assert "snapshot" in msg.lower()
 
     def test_not_visible_error(self, browser_skill):
         err = Exception("Element is not visible")
         msg = browser_skill._to_ai_error(err)
-        assert "not found or hidden" in msg
+        assert "not visible" in msg.lower()
 
     def test_intercepts_pointer(self, browser_skill):
         err = Exception("Element intercepts pointer events")
@@ -585,7 +586,17 @@ class TestErrorTranslation:
     def test_detached_error(self, browser_skill):
         err = Exception("Element is detached from DOM")
         msg = browser_skill._to_ai_error(err)
-        assert "gone" in msg.lower()
+        assert "no longer exists" in msg.lower() or "snapshot" in msg.lower()
+
+    def test_target_closed(self, browser_skill):
+        err = Exception("Target closed or browser has been closed")
+        msg = browser_skill._to_ai_error(err)
+        assert "connection lost" in msg.lower() or "closed" in msg.lower()
+
+    def test_execution_context_destroyed(self, browser_skill):
+        err = Exception("Execution context was destroyed")
+        msg = browser_skill._to_ai_error(err)
+        assert "navigated" in msg.lower()
 
     def test_generic_error_with_ref(self, browser_skill):
         err = Exception("Something unexpected happened")

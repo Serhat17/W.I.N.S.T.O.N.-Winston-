@@ -57,7 +57,39 @@ Most AI assistants are either cloud-only SaaS products or barebones chatbot wrap
 
 ## Quick Start
 
-### 1. Prerequisites
+### Option A: Homebrew (macOS)
+
+```bash
+brew install serhatbilge/tap/winston
+```
+
+Then install a local AI model and launch:
+
+```bash
+brew install ollama && ollama serve &
+ollama pull qwen2.5:7b
+winston --setup
+```
+
+### Option B: One-Line Install
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/serhatbilge/W.I.N.S.T.O.N..S/main/install.sh | bash
+```
+
+This installs everything automatically — Python, Ollama, a default AI model, and Winston itself. An interactive setup wizard will guide you through connecting Telegram, adding API keys, etc.
+
+After installation, just type:
+```bash
+winston
+```
+
+### Option C: Manual Install
+
+<details>
+<summary>Click to expand manual setup steps</summary>
+
+#### 1. Prerequisites
 
 - **Python 3.9+**
 - **Ollama** (for local LLMs) — [ollama.ai](https://ollama.ai)
@@ -69,7 +101,7 @@ ollama serve &
 ollama pull qwen2.5:7b
 ```
 
-### 2. Install
+#### 2. Install
 
 ```bash
 git clone https://github.com/serhatbilge/W.I.N.S.T.O.N..S.git
@@ -83,12 +115,18 @@ python3 -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 3. Configure
+#### 3. Configure
 
 ```bash
+# Run the interactive setup wizard
+python -m winston.main --setup
+
+# Or manually
 cp .env.example .env
 # Add your API keys (all optional — Ollama works out of the box)
 ```
+
+</details>
 
 <details>
 <summary>Supported API keys in <code>.env</code></summary>

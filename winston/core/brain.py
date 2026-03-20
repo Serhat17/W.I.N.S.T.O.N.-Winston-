@@ -186,7 +186,11 @@ class Brain:
         for name, skill in self.available_skills.items():
             tools_desc += f"\n- **{name}**: {skill.description}"
             if skill.parameters:
-                tools_desc += f"\n  Parameters: {json.dumps(skill.parameters)}"
+                try:
+                    tools_desc += f"\n  Parameters: {json.dumps(skill.parameters)}"
+                except (TypeError, ValueError) as e:
+                    logger.warning(f"Skill '{name}' parameters not serializable: {e}")
+                    tools_desc += f"\n  Parameters: {skill.parameters!r}"
             skill_names.append(name)
 
         tools_desc += (
@@ -350,15 +354,19 @@ class Brain:
 
         # ── Build system prompt (privacy-aware) ──────────
         if system_override:
+            # Caller provided an explicit prompt (e.g. scheduler summary).
+            # Skip tool descriptions — not needed for pure text tasks.
             system_prompt = system_override
         elif self._is_cloud_provider():
             # Cloud provider: strip personal identity data
             system_prompt = self._build_safe_system_prompt()
+            system_prompt += self._build_tools_description()
         elif self.identity:
             system_prompt = self.identity.build_system_prompt(self.config.system_prompt)
+            system_prompt += self._build_tools_description()
         else:
             system_prompt = self.config.system_prompt
-        system_prompt += self._build_tools_description()
+            system_prompt += self._build_tools_description()
 
         messages = [{"role": "system", "content": system_prompt}]
 
@@ -522,11 +530,13 @@ class Brain:
             system_prompt = system_override
         elif self._is_cloud_provider():
             system_prompt = self._build_safe_system_prompt()
+            system_prompt += self._build_tools_description()
         elif self.identity:
             system_prompt = self.identity.build_system_prompt(self.config.system_prompt)
+            system_prompt += self._build_tools_description()
         else:
             system_prompt = self.config.system_prompt
-        system_prompt += self._build_tools_description()
+            system_prompt += self._build_tools_description()
 
         messages = [{"role": "system", "content": system_prompt}]
         if conversation_history:
@@ -849,6 +859,29 @@ class Brain:
         """
         skill_calls = []
         import re
+
+        # Fast path: if the entire response is a single JSON object, parse directly.
+        # This handles deeply nested JSON (e.g. run_script with JS code) that
+        # regex-based extraction misses.
+        stripped = response.strip()
+        if stripped.startswith("{") and stripped.endswith("}"):
+            try:
+                parsed = json.loads(stripped)
+                if "skill" in parsed:
+                    return [self._resolve_skill_call(parsed)]
+                for key in list(parsed.keys()):
+                    if key in self.available_skills:
+                        value = parsed[key]
+                        if isinstance(value, dict):
+                            params = value
+                        elif isinstance(value, str):
+                            params = {k: v for k, v in parsed.items() if k != key}
+                            params["action"] = value
+                        else:
+                            continue
+                        return [self._resolve_skill_call({"skill": key, "parameters": params})]
+            except json.JSONDecodeError:
+                pass
 
         # Collect all JSON-looking blocks (both fenced and bare)
         raw_blocks = []

@@ -8,6 +8,7 @@ import asyncio
 import json
 import logging
 import secrets
+import traceback
 from dataclasses import dataclass, field, asdict
 from datetime import datetime
 from pathlib import Path
@@ -315,7 +316,10 @@ class Scheduler:
 
         except Exception as e:
             result_text = f"Task failed: {e}"
-            logger.error(f"Scheduled task {task.name} failed: {e}")
+            logger.error(
+                f"Scheduled task {task.name} failed: {e}\n"
+                f"{traceback.format_exc()}"
+            )
 
         task.last_result = result_text[:500] if result_text else "No result"
         self._save_schedules()

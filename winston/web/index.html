@@ -1,1080 +1,1203 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="theme-color" content="#080b14">
-    <title>W.I.N.S.T.O.N.</title>
-    <style>
-        *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
-        :root{
-            --bg-primary:#080b14;--bg-secondary:#0d1117;--bg-tertiary:#131a27;--bg-input:#151d2b;
-            --accent:#3b9eff;--accent-soft:#2a7de0;--accent-subtle:rgba(59,158,255,0.08);
-            --accent-glow:rgba(59,158,255,0.12);
-            --text-primary:#e6edf3;--text-secondary:#7d8590;--text-muted:#484f58;
-            --user-bubble:#1a3150;--winston-bubble:#131a27;
-            --border:rgba(255,255,255,0.06);--border-subtle:rgba(255,255,255,0.04);
-            --danger:#f85149;--success:#3fb950;--warning:#d29922;
-            --radius-sm:8px;--radius-md:12px;--radius-lg:18px;--sidebar-width:280px;
-        }
-        [data-theme="light"]{
-            --bg-primary:#ffffff;--bg-secondary:#f6f8fa;--bg-tertiary:#eef1f5;--bg-input:#f0f3f7;
-            --accent:#0969da;--accent-soft:#0757b5;--accent-subtle:rgba(9,105,218,0.08);
-            --accent-glow:rgba(9,105,218,0.12);
-            --text-primary:#1f2328;--text-secondary:#656d76;--text-muted:#8b949e;
-            --user-bubble:#ddf4ff;--winston-bubble:#f6f8fa;
-            --border:rgba(0,0,0,0.08);--border-subtle:rgba(0,0,0,0.04);
-        }
-        body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Inter','Segoe UI',system-ui,sans-serif;background:var(--bg-primary);color:var(--text-primary);height:100vh;height:100dvh;display:flex;overflow:hidden;-webkit-font-smoothing:antialiased}
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>W.I.N.S.T.O.N.</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎩</text></svg>">
+<style>
+/* ── Reset & Variables ─────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0a0f;--bg2:#12121a;--bg3:#1a1a28;--bg4:#222236;
+  --text:#e8e6f0;--text2:#9896a8;--text3:#6b6980;
+  --accent:#7c6aef;--accent2:#9d8df7;--accent-glow:rgba(124,106,239,.15);
+  --green:#34d399;--red:#f87171;--orange:#fbbf24;--blue:#60a5fa;
+  --border:#2a2a3e;--radius:12px;--radius-sm:8px;
+  --shadow:0 4px 24px rgba(0,0,0,.4);
+  --font:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif;
+  --mono:'SF Mono','JetBrains Mono','Fira Code',monospace;
+  --sidebar-w:280px;--header-h:56px;
+}
+html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased}
+a{color:var(--accent2);text-decoration:none}
+a:hover{text-decoration:underline}
+button{font-family:var(--font);cursor:pointer;border:none;outline:none}
+input,textarea,select{font-family:var(--font);outline:none}
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:3px}
 
-        /* Sidebar */
-        .sidebar{width:var(--sidebar-width);background:var(--bg-secondary);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;transition:transform .25s ease,opacity .25s;z-index:50}
-        .sidebar.hidden{transform:translateX(-100%);position:absolute;height:100%;opacity:0;pointer-events:none}
-        .sidebar-header{padding:16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
-        .sidebar-header h2{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--text-secondary)}
-        .new-chat-btn{background:var(--accent);border:none;color:#fff;border-radius:var(--radius-sm);padding:6px 12px;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;transition:background .15s}
-        .new-chat-btn:hover{background:var(--accent-soft)}
-        .sidebar-section{padding:12px 12px 6px}
-        .sidebar-section-title{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--text-muted);margin-bottom:6px;padding:0 4px}
-        .sidebar-list{flex:1;overflow-y:auto;padding:4px 8px}
-        .sidebar-item{display:flex;align-items:center;gap:8px;padding:9px 10px;border-radius:var(--radius-sm);cursor:pointer;transition:background .12s;font-size:13px;color:var(--text-secondary);border:none;background:none;width:100%;text-align:left;font-family:inherit}
-        .sidebar-item:hover{background:var(--accent-subtle);color:var(--text-primary)}
-        .sidebar-item.active{background:var(--accent-subtle);color:var(--accent)}
-        .sidebar-item svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
-        .sidebar-item-text{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
-        .sidebar-footer{padding:12px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:4px}
-        .sidebar-footer .sidebar-item{font-size:12.5px}
+/* ── Animations ────────────────────────────────── */
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes slideIn{from{transform:translateX(-100%)}to{transform:translateX(0)}}
+.fade-in{animation:fadeIn .3s ease}
 
-        /* Main */
-        .main{flex:1;display:flex;flex-direction:column;min-width:0}
+/* ── Login Screen ──────────────────────────────── */
+#login-screen{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  height:100vh;gap:32px;background:radial-gradient(ellipse at 50% 30%,rgba(124,106,239,.08),transparent 60%),var(--bg);
+}
+.login-logo{font-size:48px;margin-bottom:-16px}
+.login-title{font-size:28px;font-weight:700;letter-spacing:2px}
+.login-subtitle{color:var(--text2);font-size:14px;margin-top:-24px}
+.login-box{display:flex;flex-direction:column;gap:12px;width:320px}
+.login-box input{
+  padding:14px 16px;border-radius:var(--radius);border:1px solid var(--border);
+  background:var(--bg2);color:var(--text);font-size:16px;text-align:center;
+  letter-spacing:8px;transition:border .2s;
+}
+.login-box input:focus{border-color:var(--accent)}
+.login-box input::placeholder{letter-spacing:normal;color:var(--text3)}
+.login-btn{
+  padding:14px;border-radius:var(--radius);background:var(--accent);color:#fff;
+  font-size:15px;font-weight:600;transition:all .2s;
+}
+.login-btn:hover{background:var(--accent2);transform:translateY(-1px)}
+.login-btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.login-error{color:var(--red);font-size:13px;text-align:center;min-height:20px}
+.login-hint{color:var(--text3);font-size:12px;text-align:center}
 
-        /* Header */
-        .header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--bg-secondary);border-bottom:1px solid var(--border);flex-shrink:0}
-        .header-left{display:flex;align-items:center;gap:10px}
-        .menu-btn,.header-btn{background:transparent;border:none;color:var(--text-secondary);border-radius:var(--radius-sm);padding:7px;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center}
-        .menu-btn:hover,.header-btn:hover{background:var(--accent-subtle);color:var(--accent)}
-        .menu-btn svg,.header-btn svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-        .arc-reactor{width:30px;height:30px;position:relative;flex-shrink:0}
-        .arc-reactor-ring{position:absolute;inset:0;border-radius:50%;border:1.5px solid var(--accent);opacity:.35}
-        .arc-reactor-core{position:absolute;inset:6px;border-radius:50%;background:radial-gradient(circle at 40% 40%,var(--accent),rgba(59,158,255,0.08) 70%);box-shadow:0 0 12px rgba(59,158,255,0.3);animation:corePulse 3s ease-in-out infinite}
-        @keyframes corePulse{0%,100%{opacity:.8}50%{opacity:1;box-shadow:0 0 20px rgba(59,158,255,0.4)}}
-        .header-title h1{font-size:15px;font-weight:600;letter-spacing:1.5px}
-        .header-status{display:flex;align-items:center;gap:5px;margin-top:1px}
-        .status-dot{width:6px;height:6px;border-radius:50%;background:var(--success)}
-        .status-dot.offline{background:var(--danger)}
-        .status-label{font-size:10.5px;color:var(--text-muted);font-weight:500;text-transform:uppercase;letter-spacing:.5px}
-        .header-actions{display:flex;gap:2px;align-items:center}
-        .provider-badge{display:inline-flex;align-items:center;gap:4px;background:var(--accent-subtle);border:1px solid rgba(59,158,255,0.15);border-radius:14px;padding:3px 10px 3px 8px;font-size:10.5px;color:var(--accent);font-weight:500;text-transform:uppercase;letter-spacing:.3px;cursor:pointer;transition:all .15s;margin-right:4px}
-        .provider-badge:hover{background:rgba(59,158,255,0.15)}
+/* ── App Layout ────────────────────────────────── */
+#app{display:none;height:100vh;overflow:hidden}
+#app.active{display:flex}
 
-        /* Chat */
-        .chat-container{flex:1;overflow-y:auto;padding:20px 16px;display:flex;flex-direction:column;gap:16px;scroll-behavior:smooth;-webkit-overflow-scrolling:touch}
-        .message{display:flex;gap:10px;max-width:82%;animation:msgIn .25s ease-out}
-        @keyframes msgIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
-        .message.user{align-self:flex-end;flex-direction:row-reverse}
-        .message.winston{align-self:flex-start}
-        .message-avatar{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px}
-        .message.winston .message-avatar{background:linear-gradient(135deg,rgba(59,158,255,0.2),rgba(59,158,255,0.05));border:1px solid rgba(59,158,255,0.15);color:var(--accent)}
-        .message.user .message-avatar{background:var(--user-bubble);border:1px solid var(--border);color:var(--text-secondary)}
-        .message-avatar svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-        .message-content{min-width:0}
-        .message-bubble{padding:10px 14px;border-radius:var(--radius-lg);font-size:14px;line-height:1.55;word-wrap:break-word;overflow-wrap:break-word}
-        .message.user .message-bubble{background:var(--user-bubble);border-bottom-right-radius:4px}
-        .message.winston .message-bubble{background:var(--winston-bubble);border:1px solid var(--border);border-bottom-left-radius:4px}
-        .message-meta{font-size:10px;color:var(--text-muted);margin-top:3px;padding:0 6px;font-weight:500}
-        .message.user .message-meta{text-align:right}
-        .message-bubble pre{background:var(--bg-primary);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;margin:6px 0;overflow-x:auto;font-size:12px;line-height:1.5}
-        .message-bubble code{font-family:'SF Mono','JetBrains Mono','Fira Code','Consolas',monospace;font-size:12px}
-        .message-bubble p+p{margin-top:6px}
-        .message-bubble ul,.message-bubble ol{padding-left:18px;margin:4px 0}
-        .message-bubble li{margin:2px 0}
-        .message-images{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
-        .message-image{width:120px;height:120px;border-radius:var(--radius-sm);overflow:hidden;border:1px solid var(--border);cursor:pointer;transition:transform .15s}
-        .message-image:hover{transform:scale(1.02)}
-        .message-image img{width:100%;height:100%;object-fit:cover}
+/* ── Sidebar ───────────────────────────────────── */
+.sidebar{
+  width:var(--sidebar-w);background:var(--bg2);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;flex-shrink:0;transition:transform .3s;z-index:20;
+}
+.sidebar-header{
+  padding:16px;display:flex;align-items:center;gap:10px;
+  border-bottom:1px solid var(--border);min-height:var(--header-h);
+}
+.sidebar-logo{font-size:24px}
+.sidebar-brand{font-size:15px;font-weight:700;letter-spacing:1.5px;flex:1}
+.sidebar-close{display:none;background:none;color:var(--text2);font-size:20px;padding:4px}
 
-        /* Typing */
-        .typing-indicator{display:none;align-self:flex-start;padding:12px 16px;background:var(--winston-bubble);border:1px solid var(--border);border-radius:var(--radius-lg);border-bottom-left-radius:4px;margin-left:38px;margin-bottom:8px}
-        .typing-indicator.active{display:flex;gap:5px;align-items:center}
-        .typing-dot{width:5px;height:5px;border-radius:50%;background:var(--accent);opacity:.4;animation:typingPulse 1.4s ease-in-out infinite}
-        .typing-dot:nth-child(2){animation-delay:.15s}
-        .typing-dot:nth-child(3){animation-delay:.3s}
-        @keyframes typingPulse{0%,60%,100%{transform:scale(1);opacity:.3}30%{transform:scale(1.3);opacity:.9}}
+.sidebar-nav{flex:1;overflow-y:auto;padding:8px}
+.nav-section{padding:12px 12px 4px;font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:1px}
+.nav-item{
+  display:flex;align-items:center;gap:10px;padding:10px 12px;
+  border-radius:var(--radius-sm);color:var(--text2);font-size:14px;
+  cursor:pointer;transition:all .15s;margin:1px 0;
+}
+.nav-item:hover{background:var(--bg3);color:var(--text)}
+.nav-item.active{background:var(--accent-glow);color:var(--accent2)}
+.nav-item .icon{width:20px;text-align:center;font-size:16px}
+.nav-item .badge{
+  margin-left:auto;background:var(--accent);color:#fff;
+  font-size:11px;padding:2px 7px;border-radius:10px;font-weight:600;
+}
 
-        /* Input */
-        .input-area{padding:10px 16px;padding-bottom:max(12px,env(safe-area-inset-bottom));background:var(--bg-secondary);border-top:1px solid var(--border);flex-shrink:0}
-        .input-row{display:flex;align-items:flex-end;gap:6px;max-width:800px;margin:0 auto}
-        .input-wrapper{flex:1}
-        #messageInput{width:100%;background:var(--bg-input);border:1px solid var(--border);border-radius:22px;padding:9px 16px;color:var(--text-primary);font-size:14px;outline:none;resize:none;max-height:120px;line-height:1.45;font-family:inherit;transition:border-color .15s,box-shadow .15s}
-        #messageInput:focus{border-color:rgba(59,158,255,0.35);box-shadow:0 0 0 3px var(--accent-glow)}
-        #messageInput::placeholder{color:var(--text-muted)}
-        .ctrl-btn{width:38px;height:38px;border-radius:50%;border:1px solid var(--border);background:var(--bg-input);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;flex-shrink:0;color:var(--text-secondary)}
-        .ctrl-btn:hover{border-color:rgba(59,158,255,0.3);color:var(--accent);background:var(--accent-subtle)}
-        .ctrl-btn svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-        .send-btn{background:var(--accent);border-color:var(--accent);color:#fff}
-        .send-btn:hover{background:var(--accent-soft)!important;border-color:var(--accent-soft)!important;color:#fff!important}
-        .send-btn:disabled{opacity:.3;cursor:default;background:var(--bg-input);border-color:var(--border);color:var(--text-muted)}
-        .send-btn:disabled:hover{background:var(--bg-input)!important;border-color:var(--border)!important;color:var(--text-muted)!important}
-        .voice-btn.listening{border-color:var(--danger)!important;color:var(--danger)!important;background:rgba(248,81,73,0.08)!important;animation:listenPulse 1.5s ease-in-out infinite}
-        @keyframes listenPulse{0%,100%{box-shadow:0 0 0 0 rgba(248,81,73,0.25)}50%{box-shadow:0 0 0 6px rgba(248,81,73,0)}}
-        .tts-btn.active{border-color:rgba(59,158,255,0.3);color:var(--accent);background:var(--accent-subtle)}
-        
-        /* Image Preview */
-        .image-preview-container{display:none;padding:8px 16px;gap:8px;overflow-x:auto;background:var(--bg-secondary);border-top:1px solid var(--border)}
-        .image-preview-container.active{display:flex}
-        .image-preview{width:60px;height:60px;position:relative;border-radius:var(--radius-sm);overflow:hidden;border:1px solid var(--border);flex-shrink:0}
-        .image-preview img{width:100%;height:100%;object-fit:cover}
-        .image-preview-remove{position:absolute;top:2px;right:2px;background:rgba(0,0,0,0.5);color:#fff;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:12px;font-weight:bold}
+.sidebar-conversations{flex:1;overflow-y:auto;padding:8px}
+.conv-item{
+  display:flex;align-items:center;gap:8px;padding:9px 12px;
+  border-radius:var(--radius-sm);color:var(--text2);font-size:13px;
+  cursor:pointer;transition:all .15s;margin:1px 0;
+}
+.conv-item:hover{background:var(--bg3);color:var(--text)}
+.conv-item.active{background:var(--accent-glow);color:var(--accent2)}
+.conv-item .conv-title{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.conv-item .conv-delete{
+  opacity:0;color:var(--text3);font-size:14px;padding:2px 4px;transition:opacity .15s;
+}
+.conv-item:hover .conv-delete{opacity:1}
+.conv-item .conv-delete:hover{color:var(--red)}
 
-        /* Welcome */
-        .welcome{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;padding:40px 24px;text-align:center}
-        .welcome-logo{width:64px;height:64px;position:relative;margin-bottom:20px}
-        .welcome-logo .ring-outer{position:absolute;inset:0;border-radius:50%;border:1.5px solid rgba(59,158,255,0.2)}
-        .welcome-logo .ring-inner{position:absolute;inset:10px;border-radius:50%;border:1px solid rgba(59,158,255,0.15)}
-        .welcome-logo .core{position:absolute;inset:20px;border-radius:50%;background:radial-gradient(circle at 40% 40%,var(--accent),rgba(59,158,255,0.05) 80%);box-shadow:0 0 24px rgba(59,158,255,0.25);animation:corePulse 3s ease-in-out infinite}
-        .welcome h2{font-size:18px;font-weight:600;letter-spacing:2px;margin-bottom:4px}
-        .welcome p{font-size:12.5px;color:var(--text-muted);margin-bottom:24px}
-        .suggestions{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;max-width:480px}
-        .suggestion{display:flex;align-items:center;gap:6px;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:20px;padding:7px 13px;font-size:12.5px;color:var(--text-secondary);cursor:pointer;transition:all .15s;font-family:inherit}
-        .suggestion:hover{border-color:rgba(59,158,255,0.25);color:var(--accent);background:var(--accent-subtle)}
-        .suggestion svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.new-chat-btn{
+  margin:8px;padding:10px;border-radius:var(--radius-sm);background:var(--bg3);
+  color:var(--text);font-size:13px;font-weight:500;display:flex;align-items:center;
+  gap:8px;justify-content:center;transition:all .15s;border:1px dashed var(--border);
+}
+.new-chat-btn:hover{background:var(--bg4);border-color:var(--accent)}
 
-        /* Modal */
-        .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);z-index:100;align-items:center;justify-content:center;padding:20px}
-        .modal-overlay.active{display:flex}
-        .modal{background:var(--bg-secondary);border:1px solid var(--border);border-radius:var(--radius-md);max-width:480px;width:100%;max-height:85vh;overflow-y:auto}
-        .modal-header{display:flex;align-items:center;justify-content:space-between;padding:16px 18px 12px;border-bottom:1px solid var(--border)}
-        .modal-header h2{font-size:14px;font-weight:600;letter-spacing:.3px}
-        .modal-close{background:none;border:none;color:var(--text-secondary);cursor:pointer;padding:4px;border-radius:6px;display:flex;transition:all .15s}
-        .modal-close:hover{color:var(--text-primary);background:var(--accent-subtle)}
-        .modal-close svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round}
-        .modal-body{padding:14px 18px 18px}
-        .field{margin-bottom:14px}
-        .field-label{display:block;font-size:11px;font-weight:600;color:var(--text-secondary);margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px}
-        .field select,.field input[type="text"],.field input[type="password"]{width:100%;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 12px;color:var(--text-primary);font-size:13px;font-family:inherit;outline:none;transition:border-color .15s}
-        .field select:focus,.field input:focus{border-color:rgba(59,158,255,0.35)}
-        .field input[type="range"]{width:100%;accent-color:var(--accent)}
-        .tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:14px}
-        .tab{padding:8px 14px;font-size:12.5px;font-weight:500;color:var(--text-muted);cursor:pointer;border:none;background:none;font-family:inherit;border-bottom:2px solid transparent;transition:all .15s}
-        .tab.active{color:var(--accent);border-bottom-color:var(--accent)}
-        .tab:hover{color:var(--text-primary)}
-        .tab-content{display:none}
-        .tab-content.active{display:block}
-        .api-key-row{display:flex;align-items:center;gap:8px;margin-bottom:10px}
-        .api-key-row label{font-size:12px;font-weight:500;color:var(--text-secondary);min-width:72px}
-        .api-key-row input{flex:1;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 12px;color:var(--text-primary);font-size:13px;font-family:inherit;outline:none}
-        .api-key-status{width:8px;height:8px;border-radius:50%;flex-shrink:0}
-        .api-key-status.connected{background:var(--success)}
-        .api-key-status.disconnected{background:var(--text-muted)}
-        .modal-footer{display:flex;gap:8px;padding:0 18px 18px}
-        .modal-footer button{flex:1;padding:8px 14px;border-radius:var(--radius-sm);border:none;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;transition:all .15s}
-        .btn-primary{background:var(--accent);color:#fff}
-        .btn-primary:hover{background:var(--accent-soft)}
-        .btn-ghost{background:transparent;color:var(--text-secondary);border:1px solid var(--border)!important}
-        .btn-ghost:hover{border-color:rgba(255,255,255,0.1)!important;color:var(--text-primary)}
+.sidebar-footer{
+  padding:12px;border-top:1px solid var(--border);display:flex;gap:8px;
+}
+.sidebar-footer button{
+  flex:1;padding:8px;border-radius:var(--radius-sm);background:var(--bg3);
+  color:var(--text2);font-size:12px;transition:all .15s;
+}
+.sidebar-footer button:hover{background:var(--bg4);color:var(--text)}
 
-        /* Login */
-        .login-overlay{position:fixed;inset:0;z-index:200;background:var(--bg-primary);display:flex;align-items:center;justify-content:center;padding:24px}
-        .login-overlay.hidden{display:none}
-        .login-card{max-width:340px;width:100%;text-align:center}
-        .login-logo{width:72px;height:72px;position:relative;margin:0 auto 24px}
-        .login-logo .ring-outer{position:absolute;inset:0;border-radius:50%;border:1.5px solid rgba(59,158,255,0.25)}
-        .login-logo .ring-inner{position:absolute;inset:12px;border-radius:50%;border:1px solid rgba(59,158,255,0.15)}
-        .login-logo .core{position:absolute;inset:22px;border-radius:50%;background:radial-gradient(circle at 40% 40%,var(--accent),rgba(59,158,255,0.05) 80%);box-shadow:0 0 24px rgba(59,158,255,0.3);animation:corePulse 3s ease-in-out infinite}
-        .login-card h1{font-size:20px;font-weight:600;letter-spacing:2px;margin-bottom:4px}
-        .login-card p{font-size:12.5px;color:var(--text-muted);margin-bottom:24px}
-        .pin-input-group{display:flex;gap:8px;justify-content:center;margin-bottom:18px}
-        .pin-digit{width:44px;height:52px;background:var(--bg-input);border:1.5px solid var(--border);border-radius:var(--radius-sm);text-align:center;font-size:20px;font-weight:600;color:var(--text-primary);font-family:'SF Mono','JetBrains Mono',monospace;outline:none;transition:border-color .15s,box-shadow .15s;-webkit-appearance:none}
-        .pin-digit:focus{border-color:rgba(59,158,255,0.5);box-shadow:0 0 0 3px var(--accent-glow)}
-        .pin-digit.error{border-color:var(--danger);animation:pinShake .4s ease}
-        @keyframes pinShake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-4px)}40%,80%{transform:translateX(4px)}}
-        .login-btn{width:100%;padding:11px 20px;background:var(--accent);border:none;border-radius:var(--radius-sm);color:#fff;font-size:13.5px;font-weight:500;cursor:pointer;font-family:inherit;transition:background .15s;letter-spacing:.5px}
-        .login-btn:hover{background:var(--accent-soft)}
-        .login-btn:disabled{opacity:.4;cursor:default}
-        .login-error{color:var(--danger);font-size:11.5px;margin-top:10px;min-height:16px}
-        .login-hint{font-size:10.5px;color:var(--text-muted);margin-top:20px;line-height:1.5}
+/* ── Main Area ─────────────────────────────────── */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
 
-        /* Sidebar overlay for mobile */
-        .sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:40;-webkit-tap-highlight-color:transparent}
-        .sidebar-overlay.active{display:block}
-        .sidebar-close-btn{display:none;background:none;border:none;color:var(--text-secondary);cursor:pointer;padding:4px;border-radius:6px;transition:all .15s}
-        .sidebar-close-btn:hover{color:var(--text-primary);background:var(--accent-subtle)}
-        .sidebar-close-btn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round}
+.main-header{
+  display:flex;align-items:center;gap:12px;padding:0 20px;
+  height:var(--header-h);border-bottom:1px solid var(--border);
+  background:var(--bg);flex-shrink:0;
+}
+.menu-toggle{display:none;background:none;color:var(--text2);font-size:22px;padding:4px}
+.main-title{font-size:15px;font-weight:600;flex:1}
+.status-dot{width:8px;height:8px;border-radius:50%;background:var(--green)}
+.status-dot.offline{background:var(--red)}
+.status-dot.connecting{background:var(--orange);animation:pulse 1s infinite}
+.header-model{font-size:12px;color:var(--text3);background:var(--bg3);padding:4px 10px;border-radius:12px}
 
-        /* Confirmation */
-        .confirmation-bubble{background:var(--bg-tertiary);border:1px solid var(--accent);border-radius:var(--radius-md);padding:14px;margin-top:8px;max-width:100%}
-        .confirmation-header{display:flex;align-items:center;gap:8px;margin-bottom:10px;color:var(--accent)}
-        .confirmation-header svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2}
-        .confirmation-title{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
-        .confirmation-desc{font-size:13px;margin-bottom:12px;line-height:1.4}
-        .confirmation-screenshot{width:100%;border-radius:var(--radius-sm);border:1px solid var(--border);margin-bottom:12px;cursor:zoom-in}
-        .confirmation-actions{display:flex;gap:8px}
-        .confirmation-btn{flex:1;padding:8px;border-radius:var(--radius-sm);border:none;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;font-family:inherit}
-        .conf-approve{background:var(--accent);color:#fff}
-        .conf-approve:hover{background:var(--accent-soft)}
-        .conf-deny{background:var(--bg-input);color:var(--text-secondary);border:1px solid var(--border)}
-        .conf-deny:hover{background:rgba(248,81,73,0.1);color:var(--danger);border-color:var(--danger)}
-        
-        @media(min-width:768px){.chat-container{padding:24px 10%}.message{max-width:68%}}
-        @media(max-width:768px){
-            .sidebar{position:absolute;height:100%}
-            .sidebar-close-btn{display:flex;align-items:center;justify-content:center}
-        }
-        ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.08);border-radius:4px}
-    </style>
+/* ── Chat View ─────────────────────────────────── */
+.chat-view{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.messages{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:4px}
+
+.message{display:flex;gap:12px;padding:16px 0;animation:fadeIn .3s ease}
+.message.user{flex-direction:row-reverse}
+.msg-avatar{
+  width:32px;height:32px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;font-size:16px;flex-shrink:0;margin-top:2px;
+}
+.message.assistant .msg-avatar{background:var(--accent-glow);color:var(--accent2)}
+.message.user .msg-avatar{background:var(--bg4);color:var(--text2)}
+.msg-content{max-width:75%;min-width:0}
+.msg-bubble{
+  padding:12px 16px;border-radius:16px;font-size:14px;line-height:1.65;
+  word-wrap:break-word;white-space:pre-wrap;
+}
+.message.assistant .msg-bubble{background:var(--bg3);border-bottom-left-radius:4px}
+.message.user .msg-bubble{background:var(--accent);color:#fff;border-bottom-right-radius:4px}
+.msg-bubble code{
+  background:rgba(0,0,0,.3);padding:2px 6px;border-radius:4px;
+  font-family:var(--mono);font-size:13px;
+}
+.msg-bubble pre{
+  background:rgba(0,0,0,.4);padding:12px;border-radius:var(--radius-sm);
+  overflow-x:auto;margin:8px 0;font-family:var(--mono);font-size:13px;line-height:1.5;
+}
+.msg-bubble pre code{background:none;padding:0}
+.msg-time{font-size:11px;color:var(--text3);margin-top:4px;padding:0 4px}
+.message.user .msg-time{text-align:right}
+.msg-images{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+.msg-images img{max-width:300px;max-height:250px;border-radius:var(--radius-sm);cursor:pointer}
+
+.typing-indicator{
+  display:flex;gap:4px;padding:16px;align-items:center;
+}
+.typing-indicator span{
+  width:8px;height:8px;background:var(--text3);border-radius:50%;
+  animation:pulse 1.4s infinite;
+}
+.typing-indicator span:nth-child(2){animation-delay:.2s}
+.typing-indicator span:nth-child(3){animation-delay:.4s}
+
+/* ── Welcome Screen (empty chat) ───────────────── */
+.welcome{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:16px;color:var(--text2);padding:40px;
+}
+.welcome-logo{font-size:64px;margin-bottom:8px}
+.welcome h2{font-size:22px;font-weight:700;color:var(--text);letter-spacing:1px}
+.welcome p{font-size:14px;text-align:center;max-width:400px;line-height:1.6}
+.welcome-chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:8px}
+.welcome-chip{
+  padding:8px 16px;border-radius:20px;background:var(--bg3);border:1px solid var(--border);
+  color:var(--text2);font-size:13px;cursor:pointer;transition:all .15s;
+}
+.welcome-chip:hover{border-color:var(--accent);color:var(--accent2);background:var(--accent-glow)}
+
+/* ── Input Bar ─────────────────────────────────── */
+.input-bar{
+  padding:16px 20px;border-top:1px solid var(--border);background:var(--bg);
+}
+.input-row{
+  display:flex;gap:8px;align-items:flex-end;max-width:800px;margin:0 auto;
+}
+.input-wrap{
+  flex:1;display:flex;align-items:flex-end;background:var(--bg2);
+  border:1px solid var(--border);border-radius:var(--radius);padding:4px;
+  transition:border .2s;
+}
+.input-wrap:focus-within{border-color:var(--accent)}
+#message-input{
+  flex:1;border:none;background:none;color:var(--text);font-size:14px;
+  padding:10px 12px;resize:none;max-height:150px;min-height:20px;line-height:1.5;
+}
+#message-input::placeholder{color:var(--text3)}
+.send-btn{
+  width:40px;height:40px;border-radius:var(--radius-sm);background:var(--accent);
+  color:#fff;font-size:18px;display:flex;align-items:center;justify-content:center;
+  transition:all .2s;flex-shrink:0;
+}
+.send-btn:hover{background:var(--accent2);transform:scale(1.05)}
+.send-btn:disabled{opacity:.3;transform:none;cursor:not-allowed}
+.input-hint{font-size:11px;color:var(--text3);text-align:center;margin-top:6px}
+
+/* ── Panel Views (Settings, etc.) ──────────────── */
+.panel-view{flex:1;overflow-y:auto;padding:32px;display:none}
+.panel-view.active{display:block}
+.panel-section{
+  max-width:700px;margin:0 auto 32px;background:var(--bg2);
+  border-radius:var(--radius);border:1px solid var(--border);overflow:hidden;
+}
+.panel-section-header{
+  padding:16px 20px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:10px;
+}
+.panel-section-header h3{font-size:15px;font-weight:600;flex:1}
+.panel-section-header .icon{font-size:18px}
+.panel-section-body{padding:16px 20px}
+
+.setting-row{
+  display:flex;align-items:center;gap:12px;padding:12px 0;
+  border-bottom:1px solid var(--border);
+}
+.setting-row:last-child{border-bottom:none}
+.setting-info{flex:1;min-width:0}
+.setting-label{font-size:14px;font-weight:500}
+.setting-desc{font-size:12px;color:var(--text3);margin-top:2px}
+.setting-control{flex-shrink:0;display:flex;gap:8px;align-items:center}
+
+.input-field{
+  padding:8px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);
+  background:var(--bg3);color:var(--text);font-size:13px;width:260px;
+  transition:border .2s;
+}
+.input-field:focus{border-color:var(--accent)}
+.input-field.mono{font-family:var(--mono);letter-spacing:.5px}
+
+.btn{
+  padding:8px 16px;border-radius:var(--radius-sm);font-size:13px;font-weight:500;
+  transition:all .15s;
+}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:var(--accent2)}
+.btn-secondary{background:var(--bg3);color:var(--text);border:1px solid var(--border)}
+.btn-secondary:hover{background:var(--bg4)}
+.btn-danger{background:rgba(248,113,113,.15);color:var(--red);border:1px solid rgba(248,113,113,.2)}
+.btn-danger:hover{background:rgba(248,113,113,.25)}
+.btn-sm{padding:6px 12px;font-size:12px}
+.btn-icon{width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:var(--radius-sm)}
+
+.tag{
+  display:inline-flex;align-items:center;gap:4px;padding:3px 10px;
+  border-radius:12px;font-size:11px;font-weight:600;
+}
+.tag-green{background:rgba(52,211,153,.15);color:var(--green)}
+.tag-red{background:rgba(248,113,113,.15);color:var(--red)}
+.tag-blue{background:rgba(96,165,250,.15);color:var(--blue)}
+.tag-orange{background:rgba(251,191,36,.15);color:var(--orange)}
+
+.empty-state{text-align:center;padding:40px;color:var(--text3)}
+.empty-state .icon{font-size:40px;margin-bottom:12px}
+
+/* ── Skills Grid ───────────────────────────────── */
+.skills-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;padding:16px 20px}
+.skill-card{
+  padding:14px;border-radius:var(--radius-sm);background:var(--bg3);
+  border:1px solid var(--border);transition:all .15s;
+}
+.skill-card:hover{border-color:var(--accent);transform:translateY(-1px)}
+.skill-name{font-size:13px;font-weight:600;margin-bottom:4px}
+.skill-desc{font-size:12px;color:var(--text3);line-height:1.4}
+
+/* ── Download Page ─────────────────────────────── */
+.download-section{
+  max-width:700px;margin:0 auto 24px;text-align:center;
+}
+.download-section h2{font-size:22px;font-weight:700;margin-bottom:8px;letter-spacing:1px}
+.download-section p{color:var(--text2);font-size:14px;line-height:1.6}
+.install-card{
+  margin:24px auto;padding:24px;border-radius:var(--radius);
+  background:var(--bg2);border:1px solid var(--border);text-align:left;
+}
+.install-card h4{font-size:14px;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.install-card .tag{margin-left:auto}
+.code-block{
+  background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);
+  padding:14px 16px;font-family:var(--mono);font-size:13px;color:var(--green);
+  position:relative;overflow-x:auto;margin:8px 0;
+}
+.code-block .copy-btn{
+  position:absolute;top:8px;right:8px;background:var(--bg3);color:var(--text2);
+  border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:11px;
+  cursor:pointer;transition:all .15s;
+}
+.code-block .copy-btn:hover{background:var(--bg4);color:var(--text)}
+.features-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));
+  gap:12px;margin-top:24px;text-align:left;
+}
+.feature-card{
+  padding:16px;border-radius:var(--radius-sm);background:var(--bg2);
+  border:1px solid var(--border);
+}
+.feature-card .icon{font-size:24px;margin-bottom:8px}
+.feature-card h5{font-size:13px;font-weight:600;margin-bottom:4px}
+.feature-card p{font-size:12px;color:var(--text3);line-height:1.5}
+
+/* ── Toast ─────────────────────────────────────── */
+.toast-container{position:fixed;top:20px;right:20px;z-index:1000;display:flex;flex-direction:column;gap:8px}
+.toast{
+  padding:12px 20px;border-radius:var(--radius-sm);font-size:13px;
+  animation:fadeIn .3s ease;min-width:250px;box-shadow:var(--shadow);
+}
+.toast-success{background:#065f46;color:#6ee7b7;border:1px solid #10b981}
+.toast-error{background:#7f1d1d;color:#fca5a5;border:1px solid #ef4444}
+.toast-info{background:#1e3a5f;color:#93c5fd;border:1px solid #3b82f6}
+
+/* ── Responsive ────────────────────────────────── */
+@media(max-width:768px){
+  .sidebar{position:fixed;left:0;top:0;bottom:0;transform:translateX(-100%);box-shadow:var(--shadow)}
+  .sidebar.open{transform:translateX(0)}
+  .sidebar-close{display:block}
+  .menu-toggle{display:block}
+  .msg-content{max-width:88%}
+  .input-field{width:180px}
+  .features-grid{grid-template-columns:1fr 1fr}
+}
+@media(max-width:480px){
+  .features-grid{grid-template-columns:1fr}
+  .setting-row{flex-direction:column;align-items:flex-start;gap:8px}
+  .setting-control{width:100%}
+  .input-field{width:100%}
+}
+
+/* ── Overlay ───────────────────────────────────── */
+.overlay{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:15;
+}
+.overlay.active{display:block}
+</style>
 </head>
 <body>
-    <!-- Login -->
-    <div class="login-overlay" id="loginOverlay">
-        <div class="login-card">
-            <div class="login-logo"><div class="ring-outer"></div><div class="ring-inner"></div><div class="core"></div></div>
-            <h1>W.I.N.S.T.O.N.</h1>
-            <p>Enter access PIN to connect</p>
-            <div class="pin-input-group" id="pinGroup">
-                <input class="pin-digit" type="password" inputmode="numeric" maxlength="1" autocomplete="off">
-                <input class="pin-digit" type="password" inputmode="numeric" maxlength="1" autocomplete="off">
-                <input class="pin-digit" type="password" inputmode="numeric" maxlength="1" autocomplete="off">
-                <input class="pin-digit" type="password" inputmode="numeric" maxlength="1" autocomplete="off">
-                <input class="pin-digit" type="password" inputmode="numeric" maxlength="1" autocomplete="off">
-                <input class="pin-digit" type="password" inputmode="numeric" maxlength="1" autocomplete="off">
-            </div>
-            <button class="login-btn" id="loginBtn" onclick="attemptLogin()" disabled>Authenticate</button>
-            <div class="login-error" id="loginError"></div>
-            <p class="login-hint">The access PIN is displayed on the server terminal.</p>
-        </div>
+
+<!-- ═══════════════════ LOGIN ═══════════════════ -->
+<div id="login-screen">
+  <div class="login-logo">🎩</div>
+  <div class="login-title">W.I.N.S.T.O.N.</div>
+  <div class="login-subtitle">Wildly Intelligent Network System for Task Operations and Navigation</div>
+  <div class="login-box">
+    <input type="password" id="pin-input" placeholder="Enter PIN" maxlength="20" autocomplete="off">
+    <button class="login-btn" id="login-btn" onclick="doLogin()">Authenticate</button>
+    <div class="login-error" id="login-error"></div>
+  </div>
+  <div class="login-hint">Set WINSTON_PIN in your .env file &bull; Default: no PIN required</div>
+</div>
+
+<!-- ═══════════════════ APP ═══════════════════ -->
+<div id="app">
+
+<!-- Overlay for mobile sidebar -->
+<div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+
+<!-- Sidebar -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <span class="sidebar-logo">🎩</span>
+    <span class="sidebar-brand">WINSTON</span>
+    <button class="sidebar-close" onclick="toggleSidebar()">✕</button>
+  </div>
+
+  <div class="sidebar-nav">
+    <div class="nav-section">Main</div>
+    <div class="nav-item active" data-view="chat" onclick="switchView('chat')">
+      <span class="icon">💬</span> Chat
+    </div>
+    <div class="nav-item" data-view="settings" onclick="switchView('settings')">
+      <span class="icon">⚙️</span> Settings
+    </div>
+    <div class="nav-item" data-view="skills" onclick="switchView('skills')">
+      <span class="icon">🧩</span> Skills
+    </div>
+    <div class="nav-item" data-view="schedules" onclick="switchView('schedules')">
+      <span class="icon">📅</span> Schedules
+    </div>
+    <div class="nav-item" data-view="download" onclick="switchView('download')">
+      <span class="icon">📥</span> Download
     </div>
 
-    <!-- Sidebar overlay (mobile) -->
-    <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+    <div class="nav-section">Conversations</div>
+  </div>
 
-    <!-- Sidebar -->
-    <aside class="sidebar hidden" id="sidebar">
-        <div class="sidebar-header">
-            <h2>Chats</h2>
-            <div style="display:flex;gap:6px;align-items:center">
-                <button class="new-chat-btn" onclick="newConversation()">New Chat</button>
-                <button class="sidebar-close-btn" onclick="closeSidebar()"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
-            </div>
-        </div>
-        <div class="sidebar-list" id="conversationList"></div>
-        <div class="sidebar-section">
-            <div class="sidebar-section-title">Routines</div>
-            <div id="routinesList"></div>
-        </div>
-        <div class="sidebar-footer">
-            <button class="sidebar-item" onclick="toggleSettings()">
-                <svg viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
-                <span class="sidebar-item-text">Settings</span>
-            </button>
-            <button class="sidebar-item" onclick="toggleTheme()">
-                <svg viewBox="0 0 24 24" id="themeIcon"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-                <span class="sidebar-item-text" id="themeLabel">Light Mode</span>
-            </button>
-        </div>
-    </aside>
+  <div class="sidebar-conversations" id="conv-list"></div>
 
-    <!-- Main -->
-    <div class="main">
-        <div class="header">
-            <div class="header-left">
-                <button class="menu-btn" onclick="toggleSidebar()" title="Menu">
-                    <svg viewBox="0 0 24 24"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-                </button>
-                <div class="arc-reactor"><div class="arc-reactor-ring"></div><div class="arc-reactor-core"></div></div>
-                <div class="header-title">
-                    <h1>W.I.N.S.T.O.N.</h1>
-                    <div class="header-status">
-                        <div class="status-dot" id="statusDot"></div>
-                        <span class="status-label" id="statusText">Connecting</span>
-                    </div>
-                </div>
-            </div>
-            <div class="header-actions">
-                <span class="provider-badge" id="providerBadge" onclick="toggleSettings()">Ollama</span>
-                <button class="header-btn" onclick="clearChat()" title="Clear chat">
-                    <svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-                </button>
-            </div>
-        </div>
+  <button class="new-chat-btn" onclick="newConversation()">+ New Chat</button>
 
-        <div class="chat-container" id="chatContainer">
-            <div class="welcome" id="welcomeMessage">
-                <div class="welcome-logo"><div class="ring-outer"></div><div class="ring-inner"></div><div class="core"></div></div>
-                <h2>W.I.N.S.T.O.N.</h2>
-                <p>Wildly Intelligent Network System for Task Operations and Navigation</p>
-                <div class="suggestions">
-                    <button class="suggestion" onclick="quickSend('What time is it?')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Current time</button>
-                    <button class="suggestion" onclick="quickSend('Search for latest AI news')"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Search the web</button>
-                    <button class="suggestion" onclick="quickSend('Good morning')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>Morning briefing</button>
-                    <button class="suggestion" onclick="quickSend('Take a note: ')"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>Take a note</button>
-                    <button class="suggestion" onclick="quickSend('Calculate: 2**10 * 3.14')"><svg viewBox="0 0 24 24"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/></svg>Calculate</button>
-                    <button class="suggestion" onclick="quickSend('What is on my clipboard?')"><svg viewBox="0 0 24 24"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg>Clipboard</button>
-                </div>
-            </div>
-            <div class="typing-indicator" id="typingIndicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>
-        </div>
+  <div class="sidebar-footer">
+    <button onclick="clearChat()" title="Clear memory">🗑️ Clear</button>
+    <button onclick="doLogout()" title="Sign out">🚪 Logout</button>
+  </div>
+</aside>
 
-        <div class="image-preview-container" id="imagePreviewContainer"></div>
-        <div class="input-area">
-            <div class="input-row">
-                <button class="ctrl-btn tts-btn active" id="ttsToggle" onclick="toggleTTS()" title="Toggle voice">
-                    <svg viewBox="0 0 24 24" id="ttsIcon"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
-                </button>
-                <button class="ctrl-btn" id="imageBtn" onclick="document.getElementById('imageInput').click()" title="Upload image">
-                    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-                </button>
-                <input type="file" id="imageInput" accept="image/*" style="display:none" onchange="handleImageSelect(this)">
-                <div class="input-wrapper">
-                    <textarea id="messageInput" placeholder="Message W.I.N.S.T.O.N..." rows="1" onkeydown="handleKeyDown(event)" oninput="autoResize(this)"></textarea>
-                </div>
-                <button class="ctrl-btn voice-btn" id="voiceBtn" onclick="toggleVoice()" title="Voice input">
-                    <svg viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
-                </button>
-                <button class="ctrl-btn send-btn" id="sendBtn" onclick="sendMessage()" disabled title="Send">
-                    <svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-                </button>
-            </div>
+<!-- Main Area -->
+<div class="main">
+  <header class="main-header">
+    <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
+    <span class="main-title" id="main-title">Chat</span>
+    <span class="status-dot connecting" id="status-dot" title="Connecting..."></span>
+    <span class="header-model" id="header-model">—</span>
+  </header>
+
+  <!-- Chat View -->
+  <div class="chat-view" id="view-chat">
+    <div class="messages" id="messages">
+      <div class="welcome" id="welcome">
+        <div class="welcome-logo">🎩</div>
+        <h2>Good day, Sir.</h2>
+        <p>I am W.I.N.S.T.O.N. — your AI assistant. I can search the web, send emails, manage your calendar, browse websites, generate images, and much more.</p>
+        <div class="welcome-chips">
+          <div class="welcome-chip" onclick="sendQuick('What can you do?')">What can you do?</div>
+          <div class="welcome-chip" onclick="sendQuick('Fass mir die Nachrichten zusammen')">News summary</div>
+          <div class="welcome-chip" onclick="sendQuick('Search the web for latest AI news')">Search the web</div>
+          <div class="welcome-chip" onclick="sendQuick('What is the weather like today?')">Weather</div>
         </div>
+      </div>
+    </div>
+    <div class="input-bar">
+      <div class="input-row">
+        <div class="input-wrap">
+          <textarea id="message-input" rows="1" placeholder="Message Winston..." onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+        </div>
+        <button class="send-btn" id="send-btn" onclick="sendMessage()" disabled>➤</button>
+      </div>
+      <div class="input-hint">Enter to send &bull; Shift+Enter for new line &bull; Type <b>help</b> for commands</div>
+    </div>
+  </div>
+
+  <!-- Settings View -->
+  <div class="panel-view" id="view-settings">
+    <!-- Model Selection -->
+    <div class="panel-section">
+      <div class="panel-section-header"><span class="icon">🧠</span><h3>AI Model</h3></div>
+      <div class="panel-section-body">
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-label">Active Model</div>
+            <div class="setting-desc">Current LLM provider and model</div>
+          </div>
+          <div class="setting-control">
+            <select id="model-select" class="input-field" onchange="switchModel(this.value)"></select>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <!-- Settings Modal -->
-    <div class="modal-overlay" id="settingsModal">
-        <div class="modal">
-            <div class="modal-header">
-                <h2>Settings</h2>
-                <button class="modal-close" onclick="toggleSettings()"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
-            </div>
-            <div class="tabs">
-                <button class="tab active" onclick="switchTab('general',this)">General</button>
-                <button class="tab" onclick="switchTab('apikeys',this)">API Keys</button>
-                <button class="tab" onclick="switchTab('imagegen',this)">Image Gen</button>
-                <button class="tab" onclick="switchTab('voice',this)">Voice</button>
-            </div>
-            <div class="modal-body">
-                <div class="tab-content active" id="tab-general">
-                    <div class="field"><label class="field-label">Model</label><select id="modelSelect"></select></div>
-                    <div class="field"><label class="field-label">Your Name</label><input type="text" id="userName" placeholder="Sir" value="Sir"></div>
-                </div>
-                <div class="tab-content" id="tab-apikeys">
-                    <p style="font-size:12px;color:var(--text-muted);margin-bottom:14px;">Add API keys to unlock cloud models. Keys are stored in server memory only.</p>
-                    <div class="api-key-row"><label>OpenAI</label><input type="password" id="keyOpenAI" placeholder="sk-..."><div class="api-key-status disconnected" id="statusOpenAI"></div></div>
-                    <div class="api-key-row"><label>Anthropic</label><input type="password" id="keyAnthropic" placeholder="sk-ant-..."><div class="api-key-status disconnected" id="statusAnthropic"></div></div>
-                    <div class="api-key-row"><label>Gemini</label><input type="password" id="keyGemini" placeholder="AIza..."><div class="api-key-status disconnected" id="statusGemini"></div></div>
-                </div>
-                <div class="tab-content" id="tab-voice">
-                    <div class="field"><label class="field-label">Voice</label><select id="voiceSelect"></select></div>
-                    <div class="field"><label class="field-label">Speech Rate</label><input type="range" id="speechRate" min="0.5" max="2" step="0.1" value="1"></div>
-                </div>
-                <div class="tab-content" id="tab-imagegen">
-                    <p style="font-size:12px;color:var(--text-muted);margin-bottom:14px;">Choose the AI provider and model for generating images.</p>
-                    <div class="field">
-                        <label class="field-label">Image Provider</label>
-                        <select id="imageProviderSelect">
-                            <option value="pollinations">Pollinations (Free)</option>
-                            <option value="openai">OpenAI (DALL-E)</option>
-                            <option value="stability">Stability AI</option>
-                        </select>
-                    </div>
-                    <div class="field">
-                        <label class="field-label">Image Model</label>
-                        <select id="imageModelSelect">
-                            <option value="dall-e-3">DALL-E 3</option>
-                            <option value="dall-e-2">DALL-E 2</option>
-                            <option value="stable-diffusion-xl-1024-v1-0">Stable Diffusion XL</option>
-                        </select>
-                    </div>
-                    <div class="api-key-row"><label>Stability AI Key</label><input type="password" id="keyStability" placeholder="sk-..."><div class="api-key-status disconnected" id="statusStability"></div></div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn-ghost" onclick="toggleSettings()">Cancel</button>
-                <button class="btn-primary" onclick="saveSettings()">Save</button>
-            </div>
-        </div>
+    <!-- API Keys -->
+    <div class="panel-section">
+      <div class="panel-section-header"><span class="icon">🔑</span><h3>API Keys</h3></div>
+      <div class="panel-section-body" id="apikeys-body">
+        <!-- Populated dynamically -->
+      </div>
     </div>
 
-    <script>
-    /* ── State ── */
-    let ws = null, isConnected = false, isListening = false, ttsEnabled = true;
-    let recognition = null, currentStreamMsg = null, sessionToken = null;
-    let currentTheme = localStorage.getItem('winston_theme') || 'dark';
-    let selectedImages = [];
+    <!-- Image Generation -->
+    <div class="panel-section">
+      <div class="panel-section-header"><span class="icon">🎨</span><h3>Image Generation</h3></div>
+      <div class="panel-section-body">
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-label">Provider</div>
+            <div class="setting-desc">DALL-E 3 (needs OpenAI key), Stability AI, or Pollinations (free)</div>
+          </div>
+          <div class="setting-control">
+            <select id="image-provider" class="input-field" onchange="setImageProvider()">
+              <option value="pollinations">Pollinations (free)</option>
+              <option value="openai">DALL-E 3 (OpenAI)</option>
+              <option value="stability">Stability AI</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
 
-    const chatContainer = document.getElementById('chatContainer');
-    const messageInput = document.getElementById('messageInput');
-    const sendBtn = document.getElementById('sendBtn');
-    const typingIndicator = document.getElementById('typingIndicator');
-    const statusDot = document.getElementById('statusDot');
-    const statusText = document.getElementById('statusText');
+    <!-- System Info -->
+    <div class="panel-section">
+      <div class="panel-section-header"><span class="icon">📊</span><h3>System Status</h3></div>
+      <div class="panel-section-body" id="status-body">
+        <div class="setting-row">
+          <div class="setting-info"><div class="setting-label">Loading...</div></div>
+        </div>
+      </div>
+    </div>
 
-    const ICONS = {
-        winston: '<svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>',
-        user: '<svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
-        volumeOn: '<svg viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>',
-        volumeOff: '<svg viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>',
-    };
+    <!-- Usage -->
+    <div class="panel-section">
+      <div class="panel-section-header"><span class="icon">📈</span><h3>Usage Statistics</h3></div>
+      <div class="panel-section-body" id="usage-body">
+        <div class="empty-state"><div class="icon">📈</div><p>Loading usage data...</p></div>
+      </div>
+    </div>
+  </div>
 
-    /* ── Theme ── */
-    if (currentTheme === 'light') document.documentElement.setAttribute('data-theme', 'light');
-    updateThemeUI();
+  <!-- Skills View -->
+  <div class="panel-view" id="view-skills">
+    <div class="panel-section">
+      <div class="panel-section-header"><span class="icon">🧩</span><h3>Available Skills</h3></div>
+      <div class="skills-grid" id="skills-grid">
+        <div class="empty-state"><div class="icon">🧩</div><p>Loading skills...</p></div>
+      </div>
+    </div>
+  </div>
 
-    function toggleTheme() {
-        currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
-        localStorage.setItem('winston_theme', currentTheme);
-        if (currentTheme === 'light') document.documentElement.setAttribute('data-theme', 'light');
-        else document.documentElement.removeAttribute('data-theme');
-        updateThemeUI();
-    }
-    function updateThemeUI() {
-        const label = document.getElementById('themeLabel');
-        if (label) label.textContent = currentTheme === 'dark' ? 'Light Mode' : 'Dark Mode';
-    }
+  <!-- Schedules View -->
+  <div class="panel-view" id="view-schedules">
+    <div class="panel-section">
+      <div class="panel-section-header"><span class="icon">📅</span><h3>Scheduled Tasks</h3></div>
+      <div class="panel-section-body" id="schedules-body">
+        <div class="empty-state"><div class="icon">📅</div><p>Loading schedules...</p></div>
+      </div>
+    </div>
+  </div>
 
-    /* ── Sidebar ── */
-    function toggleSidebar() {
-        const sidebar = document.getElementById('sidebar');
-        const overlay = document.getElementById('sidebarOverlay');
-        const isHidden = sidebar.classList.toggle('hidden');
-        if (isHidden) {
-            overlay.classList.remove('active');
-        } else if (window.innerWidth < 768) {
-            overlay.classList.add('active');
-        }
-    }
-    function closeSidebar() {
-        document.getElementById('sidebar').classList.add('hidden');
-        document.getElementById('sidebarOverlay').classList.remove('active');
-    }
+  <!-- Download View -->
+  <div class="panel-view" id="view-download">
+    <div class="download-section fade-in">
+      <div style="font-size:64px;margin-bottom:16px">🎩</div>
+      <h2>Download W.I.N.S.T.O.N.</h2>
+      <p>Your own AI assistant — like Jarvis, but open-source.<br>Runs locally with full privacy.</p>
 
-    async function loadConversations() {
-        try {
-            const res = await apiFetch('/api/conversations');
-            const data = await res.json();
-            const list = document.getElementById('conversationList');
-            list.innerHTML = '';
-            const convs = data.conversations || [];
-            const storedConv = localStorage.getItem('winston_current_conv');
-            convs.forEach(c => {
-                const btn = document.createElement('button');
-                btn.className = 'sidebar-item' + (c.id === storedConv ? ' active' : '');
-                btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span class="sidebar-item-text">' + escapeHtml(c.title) + '</span>';
-                btn.onclick = () => loadConversation(c.id);
-                list.appendChild(btn);
-            });
-        } catch(e) { console.error('Load conversations:', e); }
-    }
+      <div class="install-card">
+        <h4>🍺 Homebrew (macOS) <span class="tag tag-green">Recommended</span></h4>
+        <div class="code-block">brew install serhatbilge/tap/winston<button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+        <p style="font-size:12px;color:var(--text3);margin-top:8px">Then run: <code style="color:var(--green)">winston setup</code></p>
+      </div>
 
-    async function loadConversation(convId) {
-        try {
-            localStorage.setItem('winston_current_conv', convId);
-            const res = await apiFetch('/api/conversations/' + convId + '/load', { method: 'POST' });
-            const data = await res.json();
-            // Clear chat, re-add typing indicator
-            chatContainer.innerHTML = '';
-            const newTi = document.createElement('div');
-            newTi.className = 'typing-indicator'; newTi.id = 'typingIndicator';
-            newTi.innerHTML = '<div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>';
-            chatContainer.appendChild(newTi);
-            (data.messages || []).forEach(m => addMessage(m.role === 'user' ? 'user' : 'winston', m.content, false, m.images));
-            if (window.innerWidth < 768) closeSidebar();
-            scrollToBottom();
-        } catch(e) { console.error('Load conversation:', e); }
-    }
+      <div class="install-card">
+        <h4>⚡ One-Line Install (macOS & Linux)</h4>
+        <div class="code-block">curl -fsSL https://raw.githubusercontent.com/serhatbilge/W.I.N.S.T.O.N..S/main/install.sh | bash<button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+        <p style="font-size:12px;color:var(--text3);margin-top:8px">Installs Python, Ollama, a default AI model, and Winston. Interactive setup wizard included.</p>
+      </div>
 
-    async function newConversation() {
-        try {
-            await apiFetch('/api/conversations/new', { method: 'POST' });
-            localStorage.removeItem('winston_current_conv');
-            // Reset chat UI without full page reload
-            chatContainer.innerHTML = '';
-            const welcome = document.createElement('div');
-            welcome.className = 'welcome'; welcome.id = 'welcomeMessage';
-            welcome.innerHTML = '<div class="welcome-logo"><div class="ring-outer"></div><div class="ring-inner"></div><div class="core"></div></div><h2>W.I.N.S.T.O.N.</h2><p>Wildly Intelligent Network System for Task Operations and Navigation</p>';
-            chatContainer.appendChild(welcome);
-            const ti = document.createElement('div');
-            ti.className = 'typing-indicator'; ti.id = 'typingIndicator';
-            ti.innerHTML = '<div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>';
-            chatContainer.appendChild(ti);
-            if (window.innerWidth < 768) closeSidebar();
-            loadConversations();
-        } catch(e) { console.error('New conversation:', e); }
-    }
+      <div class="install-card">
+        <h4>🐙 Manual (Git Clone)</h4>
+        <div class="code-block">git clone https://github.com/serhatbilge/W.I.N.S.T.O.N..S.git ~/Winston<br>cd ~/Winston && python3 -m venv venv && source venv/bin/activate<br>pip install -r requirements.txt<br>winston setup<button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      </div>
 
-    async function loadRoutines() {
-        try {
-            const res = await apiFetch('/api/routines');
-            const data = await res.json();
-            const list = document.getElementById('routinesList');
-            list.innerHTML = '';
-            (data.routines || []).forEach(r => {
-                const btn = document.createElement('button');
-                btn.className = 'sidebar-item';
-                btn.innerHTML = '<svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg><span class="sidebar-item-text">' + escapeHtml(r.name) + '</span>';
-                btn.onclick = () => runRoutine(r.id, r.name);
-                list.appendChild(btn);
-            });
-        } catch(e) { console.error('Load routines:', e); }
-    }
+      <h3 style="margin-top:40px;margin-bottom:16px;font-size:17px">After Installing</h3>
+      <div class="code-block" style="color:var(--text)">
+<span style="color:var(--text3)"># Start chatting</span>
+<span style="color:var(--green)">winston</span>
 
-    async function runRoutine(routineId, name) {
-        addMessage('user', 'Run routine: ' + name, false);
-        document.getElementById('typingIndicator').classList.add('active');
-        scrollToBottom();
-        if (window.innerWidth < 768) closeSidebar();
-        try {
-            const res = await apiFetch('/api/routines/' + routineId + '/run', { method: 'POST' });
-            const data = await res.json();
-            document.getElementById('typingIndicator').classList.remove('active');
-            addMessage('winston', data.summary || 'Routine completed.');
-            if (ttsEnabled) speak(data.summary || '');
-        } catch(e) {
-            document.getElementById('typingIndicator').classList.remove('active');
-            addMessage('winston', 'Error running routine.');
-        }
-    }
+<span style="color:var(--text3)"># Start web UI + Telegram + Discord</span>
+<span style="color:var(--green)">winston server</span>
 
-    /* ── Auth ── */
-    const pinDigits = document.querySelectorAll('.pin-digit');
-    pinDigits.forEach((input, idx) => {
-        input.addEventListener('input', (e) => {
-            if (e.target.value && idx < pinDigits.length - 1) pinDigits[idx + 1].focus();
-            updateLoginBtn();
-        });
-        input.addEventListener('keydown', (e) => {
-            if (e.key === 'Backspace' && !e.target.value && idx > 0) pinDigits[idx - 1].focus();
-            if (e.key === 'Enter') attemptLogin();
-        });
+<span style="color:var(--text3)"># Voice mode (microphone + speaker)</span>
+<span style="color:var(--green)">winston voice</span>
+
+<span style="color:var(--text3)"># Run setup wizard</span>
+<span style="color:var(--green)">winston setup</span>
+      </div>
+
+      <div class="features-grid">
+        <div class="feature-card"><div class="icon">🧠</div><h5>14+ LLM Providers</h5><p>Ollama (local), OpenAI, Anthropic, Gemini, DeepSeek, Mistral, xAI, and more</p></div>
+        <div class="feature-card"><div class="icon">🎙️</div><h5>Voice Control</h5><p>Whisper STT + Piper/ElevenLabs TTS with wake word detection</p></div>
+        <div class="feature-card"><div class="icon">📱</div><h5>Multi-Channel</h5><p>Telegram, Discord, WhatsApp, Web UI, CLI — all at once</p></div>
+        <div class="feature-card"><div class="icon">🌐</div><h5>Web Browsing</h5><p>Full Playwright automation — shop, book, research, fill forms</p></div>
+        <div class="feature-card"><div class="icon">📧</div><h5>Email & Calendar</h5><p>Read, search, send emails. Apple & Google Calendar integration</p></div>
+        <div class="feature-card"><div class="icon">🔒</div><h5>Private by Default</h5><p>Runs with local LLMs. No data leaves your machine unless you choose cloud</p></div>
+        <div class="feature-card"><div class="icon">🛒</div><h5>Shopping</h5><p>Order groceries via Telegram — "Bestell Bananen bei Flink"</p></div>
+        <div class="feature-card"><div class="icon">⏰</div><h5>Smart Scheduling</h5><p>Morning briefings, price alerts, recurring tasks, cron jobs</p></div>
+      </div>
+
+      <div style="margin-top:40px">
+        <a href="https://github.com/serhatbilge/W.I.N.S.T.O.N..S" target="_blank" class="btn btn-primary" style="padding:12px 32px;font-size:15px">⭐ Star on GitHub</a>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /main -->
+</div><!-- /app -->
+
+<!-- Toast container -->
+<div class="toast-container" id="toasts"></div>
+
+<script>
+/* ═══════════════════════════════════════════════════
+   W.I.N.S.T.O.N. Web UI — Frontend Logic
+   ═══════════════════════════════════════════════════ */
+
+// ── State ──────────────────────────────────────────
+let session = localStorage.getItem('winston_session') || '';
+let ws = null;
+let currentView = 'chat';
+let isThinking = false;
+const API = window.location.origin;
+
+// ── API Key Providers Config ───────────────────────
+const PROVIDERS = [
+  {id:'openai',     name:'OpenAI',      env:'OPENAI_API_KEY',     placeholder:'sk-...'},
+  {id:'anthropic',  name:'Anthropic',   env:'ANTHROPIC_API_KEY',  placeholder:'sk-ant-...'},
+  {id:'google',     name:'Google Gemini',env:'GOOGLE_API_KEY',    placeholder:'AI...'},
+  {id:'deepseek',   name:'DeepSeek',    env:'DEEPSEEK_API_KEY',   placeholder:'sk-...'},
+  {id:'mistral',    name:'Mistral',     env:'MISTRAL_API_KEY',    placeholder:'...'},
+  {id:'xai',        name:'xAI (Grok)',  env:'XAI_API_KEY',        placeholder:'xai-...'},
+  {id:'openrouter', name:'OpenRouter',  env:'OPENROUTER_API_KEY', placeholder:'sk-or-...'},
+  {id:'perplexity', name:'Perplexity',  env:'PERPLEXITY_API_KEY', placeholder:'pplx-...'},
+  {id:'huggingface',name:'HuggingFace', env:'HUGGINGFACE_API_KEY',placeholder:'hf_...'},
+];
+
+// ── Auth ───────────────────────────────────────────
+async function doLogin() {
+  const pin = document.getElementById('pin-input').value;
+  const btn = document.getElementById('login-btn');
+  const err = document.getElementById('login-error');
+  btn.disabled = true;
+  err.textContent = '';
+  try {
+    const r = await fetch(`${API}/api/auth`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({pin})
     });
-    pinDigits[0] && pinDigits[0].focus();
-
-    function updateLoginBtn() {
-        document.getElementById('loginBtn').disabled = getPinValue().length < 4;
+    const data = await r.json();
+    if (r.ok && data.session) {
+      session = data.session;
+      localStorage.setItem('winston_session', session);
+      showApp();
+    } else {
+      err.textContent = data.detail || 'Authentication failed';
     }
-    function getPinValue() {
-        return Array.from(pinDigits).map(d => d.value).join('');
-    }
+  } catch(e) {
+    err.textContent = 'Cannot connect to server';
+  }
+  btn.disabled = false;
+}
 
-    async function attemptLogin() {
-        const pin = getPinValue();
-        if (pin.length < 4) return;
-        const loginBtn = document.getElementById('loginBtn');
-        const loginError = document.getElementById('loginError');
-        loginBtn.disabled = true;
-        loginBtn.textContent = 'Connecting...';
-        loginError.textContent = '';
-        try {
-            const res = await fetch('/api/auth', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ pin })
-            });
-            if (res.ok) {
-                const data = await res.json();
-                sessionToken = data.session;
-                localStorage.setItem('winston_session', sessionToken);
-                showApp();
-                connect();
-            } else {
-                loginError.textContent = 'Invalid PIN.';
-                pinDigits.forEach(d => { d.value = ''; d.classList.add('error'); });
-                setTimeout(() => pinDigits.forEach(d => d.classList.remove('error')), 600);
-                pinDigits[0].focus();
-                loginBtn.textContent = 'Authenticate';
-                loginBtn.disabled = true;
-            }
-        } catch(e) {
-            loginError.textContent = 'Cannot reach server.';
-            loginBtn.textContent = 'Authenticate';
-            loginBtn.disabled = false;
-        }
-    }
+function doLogout() {
+  session = '';
+  localStorage.removeItem('winston_session');
+  if (ws) ws.close();
+  document.getElementById('app').classList.remove('active');
+  document.getElementById('login-screen').style.display = '';
+  document.getElementById('pin-input').value = '';
+}
 
-    function showApp() {
-        document.getElementById('loginOverlay').classList.add('hidden');
-        loadConversations();
-        loadRoutines();
-        loadStatus();
-    }
+// ── Init ───────────────────────────────────────────
+async function showApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').classList.add('active');
+  connectWS();
+  loadStatus();
+  loadConversations();
+}
 
-    function showLogin() {
-        document.getElementById('loginOverlay').classList.remove('hidden');
-        sessionToken = null;
-        localStorage.removeItem('winston_session');
-        pinDigits.forEach(d => d.value = '');
-        pinDigits[0] && pinDigits[0].focus();
-    }
+// Try auto-login on load
+(async function() {
+  if (!session) {
+    // Try no-PIN auth
+    try {
+      const r = await fetch(`${API}/api/auth`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({pin: ''})
+      });
+      const data = await r.json();
+      if (r.ok && data.session) {
+        session = data.session;
+        localStorage.setItem('winston_session', session);
+        showApp();
+        return;
+      }
+    } catch(e) {}
+  }
+  if (session) {
+    // Validate existing session
+    try {
+      const r = await fetch(`${API}/api/status`, {
+        headers: {'Authorization': `Bearer ${session}`}
+      });
+      if (r.ok) { showApp(); return; }
+    } catch(e) {}
+    session = '';
+    localStorage.removeItem('winston_session');
+  }
+  // Show login
+  document.getElementById('pin-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') doLogin();
+  });
+})();
 
-    function apiFetch(url, opts = {}) {
-        return fetch(url, {
-            ...opts,
-            headers: {
-                'Authorization': 'Bearer ' + sessionToken,
-                'Content-Type': 'application/json',
-                ...(opts.headers || {})
-            }
-        });
-    }
+// ── WebSocket ──────────────────────────────────────
+function connectWS() {
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  ws = new WebSocket(`${proto}://${location.host}/ws`);
 
-    async function loadStatus() {
-        try {
-            const res = await apiFetch('/api/status');
-            if (res.status === 401) { showLogin(); return; }
-            const data = await res.json();
-            const badge = document.getElementById('providerBadge');
-            badge.textContent = (data.provider || 'ollama').toUpperCase() + ': ' + (data.model || '').split(':')[0];
-            const keys = data.api_keys || {};
-            ['openai', 'anthropic', 'gemini'].forEach(p => {
-                const el = document.getElementById('status' + p.charAt(0).toUpperCase() + p.slice(1));
-                if (el) el.className = 'api-key-status ' + (keys[p] ? 'connected' : 'disconnected');
-            });
-        } catch(e) { console.error('Load status:', e); }
-    }
+  ws.onopen = () => {
+    ws.send(JSON.stringify({type:'auth', session}));
+  };
 
-    // Check stored session on load
-    (function() {
-        const stored = localStorage.getItem('winston_session');
-        if (stored) {
-            sessionToken = stored;
-            showApp();
-            connect();
-        }
-    })();
-
-    /* ── WebSocket ── */
-    function connect() {
-        if (!sessionToken) return;
-        const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-        ws = new WebSocket(protocol + '//' + location.host + '/ws');
-        ws.onopen = () => {
-            const payload = { type: 'auth', session: sessionToken };
-            // Tell server which conversation to resume (if any)
-            const storedConv = localStorage.getItem('winston_current_conv');
-            if (storedConv) payload.conversation_id = storedConv;
-            ws.send(JSON.stringify(payload));
-        };
-        ws.onmessage = (event) => {
-            const data = JSON.parse(event.data);
-            if (data.type === 'auth_ok') {
-                isConnected = true;
-                sessionToken = data.session;
-                localStorage.setItem('winston_session', sessionToken);
-                statusDot.classList.remove('offline');
-                statusText.textContent = 'Secure';
-                return;
-            }
-            if (data.type === 'auth_failed' || data.type === 'auth_required') {
-                showLogin();
-                return;
-            }
-            handleMessage(data);
-        };
-        ws.onclose = () => {
-            isConnected = false;
-            statusDot.classList.add('offline');
-            statusText.textContent = 'Reconnecting';
-            if (sessionToken) setTimeout(connect, 3000);
-        };
-        ws.onerror = () => {
-            statusDot.classList.add('offline');
-            statusText.textContent = 'Error';
-        };
-    }
-
-    function handleMessage(data) {
-        switch (data.type) {
-            case 'greeting':
-                const w = document.getElementById('welcomeMessage');
-                if (w) w.remove();
-                addMessage('winston', data.message);
-                if (ttsEnabled) speak(data.message);
-                break;
-            case 'thinking':
-                document.getElementById('typingIndicator').classList.add('active');
-                scrollToBottom();
-                break;
-            case 'stream':
-                document.getElementById('typingIndicator').classList.remove('active');
-                if (!currentStreamMsg) currentStreamMsg = addMessage('winston', '', true);
-                const bubble = currentStreamMsg.querySelector('.message-bubble');
-                bubble.textContent += data.chunk;
-                scrollToBottom();
-                break;
-            case 'response':
-                document.getElementById('typingIndicator').classList.remove('active');
-                if (currentStreamMsg) {
-                    currentStreamMsg.querySelector('.message-bubble').innerHTML = formatMessage(data.message);
-                    currentStreamMsg = null;
-                } else {
-                    addMessage('winston', data.message);
-                }
-                // Render generated images if present
-                if (data.images && data.images.length > 0) {
-                    data.images.forEach(imgB64 => {
-                        const imgMsg = addMessage('winston', '', false, [imgB64]);
-                    });
-                }
-                if (ttsEnabled) speak(data.message);
-                scrollToBottom();
-                loadConversations();
-                break;
-            case 'action_required':
-                document.getElementById('typingIndicator').classList.remove('active');
-                addConfirmation(data);
-                break;
-        }
-    }
-
-    function addConfirmation(data) {
-        const msg = document.createElement('div');
-        msg.className = 'message winston';
-        msg.innerHTML = `
-            <div class="message-avatar">${ICONS.winston}</div>
-            <div class="message-content">
-                <div class="message-bubble" style="background:transparent;border:none;padding:0">
-                    <div class="confirmation-bubble">
-                        <div class="confirmation-header">
-                            <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                            <span class="confirmation-title">Security Confirmation</span>
-                        </div>
-                        <div class="confirmation-desc">WINSTON is requesting to perform: <strong>${escapeHtml(data.description)}</strong></div>
-                        ${data.screenshot ? `<img src="data:image/jpeg;base64,${data.screenshot}" class="confirmation-screenshot" onclick="window.open(this.src)">` : ''}
-                        <div class="confirmation-actions">
-                            <button class="confirmation-btn conf-deny" onclick="respondToConfirmation('${data.action_id}', false, this)">Deny</button>
-                            <button class="confirmation-btn conf-approve" onclick="respondToConfirmation('${data.action_id}', true, this)">Approve</button>
-                        </div>
-                    </div>
-                </div>
-                <div class="message-meta">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
-            </div>
-        `;
-        const ti = document.getElementById('typingIndicator');
-        chatContainer.insertBefore(msg, ti);
-        scrollToBottom();
-    }
-
-    function respondToConfirmation(actionId, approved, btn) {
-        if (!ws || ws.readyState !== WebSocket.OPEN) return;
-        ws.send(JSON.stringify({
-            type: 'confirm_action',
-            action_id: actionId,
-            approved: approved
-        }));
-        
-        const bubble = btn.closest('.confirmation-bubble');
-        bubble.style.opacity = '0.6';
-        bubble.style.pointerEvents = 'none';
-        const actions = btn.closest('.confirmation-actions');
-        actions.innerHTML = `<div style="font-size:11px;font-weight:600;color:${approved ? 'var(--success)' : 'var(--danger)'};text-transform:uppercase;letter-spacing:1px;padding:4px 0">${approved ? 'Approved ✓' : 'Denied ✕'}</div>`;
-    }
-
-    /* ── Messages ── */
-    function addMessage(role, text, isStreaming, images) {
-        const w = document.getElementById('welcomeMessage');
-        if (w) w.remove();
-        const msg = document.createElement('div');
-        msg.className = 'message ' + role;
-        const avatar = document.createElement('div');
-        avatar.className = 'message-avatar';
-        avatar.innerHTML = role === 'winston' ? ICONS.winston : ICONS.user;
-        const content = document.createElement('div');
-        content.className = 'message-content';
-        const bbl = document.createElement('div');
-        bbl.className = 'message-bubble';
-        
-        if (isStreaming) {
-            bbl.textContent = text;
-        } else {
-            bbl.innerHTML = formatMessage(text);
-            if (images && images.length > 0) {
-                const imgContainer = document.createElement('div');
-                imgContainer.className = 'message-images';
-                images.forEach(b64 => {
-                    const imgDiv = document.createElement('div');
-                    imgDiv.className = 'message-image';
-                    const img = document.createElement('img');
-                    img.src = b64.startsWith('data:') ? b64 : 'data:image/jpeg;base64,' + b64;
-                    imgDiv.appendChild(img);
-                    imgContainer.appendChild(imgDiv);
-                });
-                bbl.appendChild(imgContainer);
-            }
-        }
-
-        const meta = document.createElement('div');
-        meta.className = 'message-meta';
-        meta.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        content.appendChild(bbl);
-        content.appendChild(meta);
-        msg.appendChild(avatar);
-        msg.appendChild(content);
-        const ti = document.getElementById('typingIndicator');
-        if (ti) chatContainer.insertBefore(msg, ti);
-        else chatContainer.appendChild(msg);
-        scrollToBottom();
-        return msg;
-    }
-
-    function formatMessage(text) {
-        if (!text) return '';
-        // Code blocks
-        text = text.replace(/```(\w*)\n?([\s\S]*?)```/g, function(m, lang, code) {
-            return '<pre><code>' + escapeHtml(code.trim()) + '</code></pre>';
-        });
-        // Inline code
-        text = text.replace(/`([^`]+)`/g, '<code>$1</code>');
-        // Bold
-        text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-        // Lists
-        text = text.replace(/^\s*[-*]\s+(.+)/gm, '<li>$1</li>');
-        text = text.replace(/(<li>[\s\S]*?<\/li>)/g, '<ul>$1</ul>');
-        // Fix nested ul
-        text = text.replace(/<\/ul>\s*<ul>/g, '');
-        // Line breaks
-        text = text.replace(/\n/g, '<br>');
-        return text;
-    }
-
-    function escapeHtml(t) {
-        const d = document.createElement('div');
-        d.textContent = t;
-        return d.innerHTML;
-    }
-
-    function scrollToBottom() {
-        requestAnimationFrame(() => { chatContainer.scrollTop = chatContainer.scrollHeight; });
-    }
-
-    /* ── Send ── */
-    async function sendMessage() {
-        const text = messageInput.value.trim();
-        const images = [...selectedImages];
-        if ((!text && images.length === 0) || !isConnected) return;
-        
-        addMessage('user', text || '', false, images);
-        ws.send(JSON.stringify({ message: text, images: images }));
-        
-        messageInput.value = '';
-        messageInput.style.height = 'auto';
-        sendBtn.disabled = true;
-        clearImageSelection();
-    }
-
-    function handleImageSelect(input) {
-        if (!input.files || !input.files[0]) return;
-        const file = input.files[0];
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const b64 = e.target.result.split(',')[1];
-            selectedImages.push(b64);
-            addImagePreview(e.target.result, selectedImages.length - 1);
-            updateSendBtn();
-        };
-        reader.readAsDataURL(file);
-        input.value = ''; // Reset for same file selection
-    }
-
-    function addImagePreview(src, index) {
-        const container = document.getElementById('imagePreviewContainer');
-        container.classList.add('active');
-        const preview = document.createElement('div');
-        preview.className = 'image-preview';
-        preview.innerHTML = `<img src="${src}"><div class="image-preview-remove" onclick="removeImage(${index})">×</div>`;
-        container.appendChild(preview);
-    }
-
-    function removeImage(index) {
-        selectedImages.splice(index, 1);
-        renderImagePreviews();
+  ws.onmessage = (e) => {
+    const data = JSON.parse(e.data);
+    switch(data.type) {
+      case 'auth_ok':
+        setStatus('online');
+        break;
+      case 'auth_failed':
+        setStatus('offline');
+        doLogout();
+        break;
+      case 'greeting':
+        appendMessage('assistant', data.message);
+        break;
+      case 'thinking':
+        showTyping();
+        break;
+      case 'response':
+        hideTyping();
+        appendMessage('assistant', data.message, data.images);
+        isThinking = false;
         updateSendBtn();
+        break;
+      case 'action_required':
+        hideTyping();
+        showActionConfirm(data);
+        break;
     }
+  };
 
-    function renderImagePreviews() {
-        const container = document.getElementById('imagePreviewContainer');
-        container.innerHTML = '';
-        if (selectedImages.length === 0) {
-            container.classList.remove('active');
-            return;
+  ws.onclose = () => {
+    setStatus('offline');
+    // Reconnect after 3s
+    setTimeout(() => { if (session) connectWS(); }, 3000);
+  };
+  ws.onerror = () => setStatus('offline');
+}
+
+function setStatus(s) {
+  const dot = document.getElementById('status-dot');
+  dot.className = 'status-dot ' + (s === 'online' ? '' : s === 'connecting' ? 'connecting' : 'offline');
+  dot.title = s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+// ── Messages ───────────────────────────────────────
+function appendMessage(role, text, images) {
+  const welcome = document.getElementById('welcome');
+  if (welcome) welcome.remove();
+
+  const container = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.className = `message ${role} fade-in`;
+
+  const avatar = role === 'assistant' ? '🎩' : '👤';
+  const time = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+
+  // Basic markdown rendering
+  let html = escapeHtml(text)
+    .replace(/```(\w*)\n?([\s\S]*?)```/g, '<pre><code>$2</code></pre>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>');
+
+  let imagesHtml = '';
+  if (images && images.length) {
+    imagesHtml = '<div class="msg-images">' +
+      images.map(b64 => `<img src="data:image/png;base64,${b64}" onclick="window.open(this.src)">`).join('') +
+      '</div>';
+  }
+
+  div.innerHTML = `
+    <div class="msg-avatar">${avatar}</div>
+    <div class="msg-content">
+      <div class="msg-bubble">${html}</div>
+      ${imagesHtml}
+      <div class="msg-time">${time}</div>
+    </div>`;
+
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+function showTyping() {
+  let ind = document.getElementById('typing');
+  if (ind) return;
+  const container = document.getElementById('messages');
+  ind = document.createElement('div');
+  ind.id = 'typing';
+  ind.className = 'typing-indicator';
+  ind.innerHTML = '<span></span><span></span><span></span>';
+  container.appendChild(ind);
+  container.scrollTop = container.scrollHeight;
+}
+
+function hideTyping() {
+  const ind = document.getElementById('typing');
+  if (ind) ind.remove();
+}
+
+function showActionConfirm(data) {
+  const modal = `
+    <div class="message assistant fade-in">
+      <div class="msg-avatar">⚠️</div>
+      <div class="msg-content">
+        <div class="msg-bubble">
+          <strong>Action requires approval:</strong><br>
+          ${escapeHtml(data.description || data.message || 'Risky action detected')}<br><br>
+          Risk level: <span class="tag tag-orange">${data.risk_level || 'MEDIUM'}</span><br><br>
+          <button class="btn btn-primary btn-sm" onclick="confirmAction('${data.action_id}',true)">✓ Approve</button>
+          <button class="btn btn-danger btn-sm" style="margin-left:8px" onclick="confirmAction('${data.action_id}',false)">✕ Deny</button>
+        </div>
+      </div>
+    </div>`;
+  document.getElementById('messages').insertAdjacentHTML('beforeend', modal);
+}
+
+function confirmAction(actionId, approved) {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({type:'confirm_action', action_id: actionId, approved}));
+    if (approved) showTyping();
+  }
+}
+
+// ── Send ───────────────────────────────────────────
+function sendMessage() {
+  const input = document.getElementById('message-input');
+  const text = input.value.trim();
+  if (!text || isThinking) return;
+
+  appendMessage('user', text);
+  isThinking = true;
+  updateSendBtn();
+
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({type:'message', message: text}));
+  }
+
+  input.value = '';
+  autoResize(input);
+}
+
+function sendQuick(text) {
+  document.getElementById('message-input').value = text;
+  sendMessage();
+}
+
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 150) + 'px';
+  updateSendBtn();
+}
+
+function updateSendBtn() {
+  const btn = document.getElementById('send-btn');
+  const input = document.getElementById('message-input');
+  btn.disabled = !input.value.trim() || isThinking;
+}
+
+// ── View Switching ─────────────────────────────────
+function switchView(view) {
+  currentView = view;
+  // Nav active state
+  document.querySelectorAll('.nav-item').forEach(el => {
+    el.classList.toggle('active', el.dataset.view === view);
+  });
+  // View visibility
+  document.getElementById('view-chat').style.display = view === 'chat' ? 'flex' : 'none';
+  document.querySelectorAll('.panel-view').forEach(el => {
+    el.classList.toggle('active', el.id === `view-${view}`);
+  });
+  // Title
+  const titles = {chat:'Chat',settings:'Settings',skills:'Skills',schedules:'Schedules',download:'Download Winston'};
+  document.getElementById('main-title').textContent = titles[view] || 'Chat';
+  // Load data for view
+  if (view === 'settings') loadSettings();
+  if (view === 'skills') loadSkills();
+  if (view === 'schedules') loadSchedules();
+  // Close mobile sidebar
+  if (window.innerWidth <= 768) toggleSidebar();
+}
+
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('overlay').classList.toggle('active');
+}
+
+// ── API Helpers ────────────────────────────────────
+async function apiFetch(path, opts = {}) {
+  const headers = {'Authorization': `Bearer ${session}`, 'Content-Type': 'application/json', ...opts.headers};
+  const r = await fetch(`${API}${path}`, {...opts, headers});
+  if (r.status === 401) { doLogout(); return null; }
+  return r.json();
+}
+
+// ── Load Status ────────────────────────────────────
+async function loadStatus() {
+  const data = await apiFetch('/api/status');
+  if (!data) return;
+  document.getElementById('header-model').textContent = data.model || '—';
+
+  const body = document.getElementById('status-body');
+  const keys = data.api_keys || {};
+  const configuredCount = Object.values(keys).filter(Boolean).length;
+
+  body.innerHTML = `
+    <div class="setting-row">
+      <div class="setting-info"><div class="setting-label">Status</div></div>
+      <span class="tag tag-green">● Online</span>
+    </div>
+    <div class="setting-row">
+      <div class="setting-info"><div class="setting-label">Model</div></div>
+      <span class="tag tag-blue">${escapeHtml(data.model)}</span>
+    </div>
+    <div class="setting-row">
+      <div class="setting-info"><div class="setting-label">Provider</div></div>
+      <span class="tag tag-blue">${escapeHtml(data.provider || 'ollama')}</span>
+    </div>
+    <div class="setting-row">
+      <div class="setting-info"><div class="setting-label">API Keys Configured</div></div>
+      <span class="tag ${configuredCount > 0 ? 'tag-green' : 'tag-orange'}">${configuredCount} providers</span>
+    </div>
+    <div class="setting-row">
+      <div class="setting-info"><div class="setting-label">Skills Active</div></div>
+      <span class="tag tag-blue">${(data.skills||[]).length} skills</span>
+    </div>`;
+}
+
+// ── Load Settings ──────────────────────────────────
+async function loadSettings() {
+  // Models
+  const models = await apiFetch('/api/models');
+  if (models) {
+    const select = document.getElementById('model-select');
+    select.innerHTML = '';
+    const list = models.models || [];
+    if (Array.isArray(list)) {
+      list.forEach(m => {
+        const name = typeof m === 'string' ? m : m.name || m.id;
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        if (models.current && name === models.current.model) opt.selected = true;
+        select.appendChild(opt);
+      });
+    }
+  }
+
+  // API Keys
+  const keysData = await apiFetch('/api/settings/apikeys');
+  const configured = keysData?.api_keys || {};
+  const body = document.getElementById('apikeys-body');
+
+  body.innerHTML = PROVIDERS.map(p => {
+    const hasKey = configured[p.id];
+    return `
+    <div class="setting-row">
+      <div class="setting-info">
+        <div class="setting-label">${p.name}</div>
+        <div class="setting-desc">${p.env}</div>
+      </div>
+      <div class="setting-control">
+        ${hasKey
+          ? `<span class="tag tag-green">✓ Configured</span>
+             <button class="btn btn-secondary btn-sm" onclick="promptApiKey('${p.id}','${p.name}','${p.placeholder}')">Change</button>`
+          : `<input type="password" class="input-field mono" id="key-${p.id}" placeholder="${p.placeholder}" style="width:200px">
+             <button class="btn btn-primary btn-sm" onclick="saveApiKey('${p.id}')">Save</button>`
         }
-        selectedImages.forEach((b64, i) => {
-            const preview = document.createElement('div');
-            preview.className = 'image-preview';
-            preview.innerHTML = `<img src="data:image/jpeg;base64,${b64}"><div class="image-preview-remove" onclick="removeImage(${i})">×</div>`;
-            container.appendChild(preview);
-        });
-    }
+      </div>
+    </div>`;
+  }).join('');
 
-    function clearImageSelection() {
-        selectedImages = [];
-        const container = document.getElementById('imagePreviewContainer');
-        container.innerHTML = '';
-        container.classList.remove('active');
-    }
+  // Usage
+  const usage = await apiFetch('/api/usage');
+  if (usage) {
+    const body2 = document.getElementById('usage-body');
+    const s = usage.session || {};
+    const d = usage.daily || {};
+    body2.innerHTML = `
+      <div class="setting-row">
+        <div class="setting-info"><div class="setting-label">Session Tokens</div><div class="setting-desc">Input + Output this session</div></div>
+        <span class="tag tag-blue">${(s.total_tokens||0).toLocaleString()}</span>
+      </div>
+      <div class="setting-row">
+        <div class="setting-info"><div class="setting-label">Session Requests</div></div>
+        <span class="tag tag-blue">${s.requests||0}</span>
+      </div>
+      <div class="setting-row">
+        <div class="setting-info"><div class="setting-label">Daily Tokens</div><div class="setting-desc">Today's total usage</div></div>
+        <span class="tag tag-blue">${(d.total_tokens||0).toLocaleString()}</span>
+      </div>`;
+  }
 
-    function updateSendBtn() {
-        sendBtn.disabled = !messageInput.value.trim() && selectedImages.length === 0;
-    }
+  // Refresh status too
+  loadStatus();
+}
 
-    messageInput.addEventListener('input', updateSendBtn);
+async function saveApiKey(provider) {
+  const input = document.getElementById(`key-${provider}`);
+  const key = input?.value?.trim();
+  if (!key) return;
+  const r = await apiFetch('/api/settings/apikey', {
+    method: 'POST',
+    body: JSON.stringify({provider, api_key: key})
+  });
+  if (r?.status === 'ok') {
+    toast(`${provider} API key saved`, 'success');
+    loadSettings();
+  } else {
+    toast('Failed to save key', 'error');
+  }
+}
 
-    function quickSend(text) {
-        messageInput.value = text;
-        if (text.endsWith(': ')) { messageInput.focus(); return; }
-        sendMessage();
-    }
-
-    function handleKeyDown(e) {
-        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
-    }
-
-    messageInput.addEventListener('input', () => {
-        updateSendBtn();
-        autoResize(messageInput);
+function promptApiKey(id, name, placeholder) {
+  const key = prompt(`Enter new ${name} API key:`);
+  if (key && key.trim()) {
+    apiFetch('/api/settings/apikey', {
+      method: 'POST',
+      body: JSON.stringify({provider: id, api_key: key.trim()})
+    }).then(r => {
+      if (r?.status === 'ok') { toast(`${name} key updated`, 'success'); loadSettings(); }
     });
+  }
+}
 
-    function autoResize(el) {
-        el.style.height = 'auto';
-        el.style.height = Math.min(el.scrollHeight, 120) + 'px';
-    }
+async function switchModel(model) {
+  const r = await apiFetch(`/api/model/${encodeURIComponent(model)}`, {method:'POST'});
+  if (r?.status === 'ok') {
+    document.getElementById('header-model').textContent = model;
+    toast(`Switched to ${model}`, 'success');
+  }
+}
 
-    /* ── Voice Input ── */
-    function toggleVoice() {
-        if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
-            alert('Speech recognition not supported.');
-            return;
-        }
-        const voiceBtn = document.getElementById('voiceBtn');
-        if (isListening) {
-            recognition.stop();
-            isListening = false;
-            voiceBtn.classList.remove('listening');
-            return;
-        }
-        const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-        recognition = new SR();
-        recognition.lang = 'en-US';
-        recognition.continuous = false;
-        recognition.interimResults = true;
-        recognition.onstart = () => { isListening = true; voiceBtn.classList.add('listening'); messageInput.placeholder = 'Listening...'; };
-        recognition.onresult = (event) => {
-            let t = '';
-            for (let i = event.resultIndex; i < event.results.length; i++) t += event.results[i][0].transcript;
-            messageInput.value = t;
-            sendBtn.disabled = false;
-            if (event.results[event.results.length - 1].isFinal) setTimeout(() => sendMessage(), 300);
-        };
-        recognition.onend = () => { isListening = false; voiceBtn.classList.remove('listening'); messageInput.placeholder = 'Message W.I.N.S.T.O.N...'; };
-        recognition.onerror = () => { isListening = false; voiceBtn.classList.remove('listening'); messageInput.placeholder = 'Message W.I.N.S.T.O.N...'; };
-        recognition.start();
-    }
+async function setImageProvider() {
+  const provider = document.getElementById('image-provider').value;
+  await apiFetch('/api/settings/image_gen', {
+    method:'POST', body: JSON.stringify({provider})
+  });
+  toast(`Image provider: ${provider}`, 'success');
+}
 
-    /* ── TTS ── */
-    function toggleTTS() {
-        ttsEnabled = !ttsEnabled;
-        const btn = document.getElementById('ttsToggle');
-        btn.classList.toggle('active', ttsEnabled);
-        btn.innerHTML = ttsEnabled ? ICONS.volumeOn : ICONS.volumeOff;
-    }
+// ── Load Skills ────────────────────────────────────
+async function loadSkills() {
+  const data = await apiFetch('/api/skills');
+  if (!data) return;
+  const grid = document.getElementById('skills-grid');
+  const skills = data.skills || {};
+  const icons = {
+    email:'📧',calendar:'📅',web_search:'🔍',web_fetch:'🌐',notes:'📝',
+    files:'📁',code_runner:'💻',image_gen:'🎨',price_monitor:'💰',
+    weather:'🌤️',news:'📰',browser:'🌐',shopping:'🛒',system:'⚙️',
+    reminder:'⏰',translation:'🌍',knowledge:'📚',apple_calendar:'🍎',
+    google_calendar:'📅',music:'🎵',smart_home:'🏠',
+  };
+  grid.innerHTML = Object.entries(skills).map(([name, info]) => `
+    <div class="skill-card">
+      <div class="skill-name">${icons[name]||'🧩'} ${escapeHtml(name)}</div>
+      <div class="skill-desc">${escapeHtml(info.description||'')}</div>
+    </div>`).join('') || '<div class="empty-state"><div class="icon">🧩</div><p>No skills loaded</p></div>';
+}
 
-    function speak(text) {
-        if (!ttsEnabled || !('speechSynthesis' in window)) return;
-        text = text.replace(/```[\s\S]*?```/g, '').replace(/`[^`]*`/g, '').replace(/\*\*/g, '').replace(/[#>*_]/g, '').replace(/https?:\/\/\S+/g, 'link');
-        if (!text.trim()) return;
-        window.speechSynthesis.cancel();
-        const u = new SpeechSynthesisUtterance(text);
-        u.rate = parseFloat(document.getElementById('speechRate').value || 1);
-        const voices = window.speechSynthesis.getVoices();
-        const pref = voices.find(v => v.name.includes('Daniel') || v.name.includes('Samantha') || v.name.includes('Google UK English Male'));
-        if (pref) u.voice = pref;
-        window.speechSynthesis.speak(u);
-    }
+// ── Load Schedules ─────────────────────────────────
+async function loadSchedules() {
+  const data = await apiFetch('/api/schedules');
+  if (!data) return;
+  const body = document.getElementById('schedules-body');
+  const tasks = data.tasks || [];
 
-    if ('speechSynthesis' in window) {
-        speechSynthesis.onvoiceschanged = () => {
-            const sel = document.getElementById('voiceSelect');
-            if (!sel) return;
-            sel.innerHTML = '';
-            speechSynthesis.getVoices().forEach((v, i) => {
-                const o = document.createElement('option');
-                o.value = i;
-                o.textContent = v.name + ' (' + v.lang + ')';
-                sel.appendChild(o);
-            });
-        };
-    }
+  if (!tasks.length) {
+    body.innerHTML = '<div class="empty-state"><div class="icon">📅</div><p>No scheduled tasks.<br>Create them in Chat: "Remind me every morning at 8am to check emails"</p></div>';
+    return;
+  }
 
-    /* ── Settings ── */
-    function toggleSettings() {
-        const m = document.getElementById('settingsModal');
-        m.classList.toggle('active');
-        if (m.classList.contains('active')) { loadModels(); loadStatus(); }
-    }
+  body.innerHTML = tasks.map(t => `
+    <div class="setting-row">
+      <div class="setting-info">
+        <div class="setting-label">${escapeHtml(t.name||t.id)}</div>
+        <div class="setting-desc">${escapeHtml(t.description||t.schedule||'')} &bull; ${t.enabled !== false ? '<span style="color:var(--green)">Active</span>' : '<span style="color:var(--text3)">Paused</span>'}</div>
+      </div>
+      <div class="setting-control">
+        <button class="btn btn-secondary btn-sm" onclick="triggerSchedule('${t.id}')">▶ Run</button>
+        <button class="btn btn-secondary btn-sm" onclick="toggleSchedule('${t.id}',${!t.enabled})">${t.enabled !== false ? '⏸' : '▶'}</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteSchedule('${t.id}')">🗑</button>
+      </div>
+    </div>`).join('');
+}
 
-    function switchTab(name, el) {
-        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-        el.classList.add('active');
-        document.getElementById('tab-' + name).classList.add('active');
-    }
+async function triggerSchedule(id) {
+  await apiFetch(`/api/schedules/${id}/trigger`, {method:'POST'});
+  toast('Task triggered', 'success');
+}
+async function toggleSchedule(id, enable) {
+  await apiFetch(`/api/schedules/${id}/toggle`, {method:'POST', body:JSON.stringify({enabled:enable})});
+  loadSchedules();
+}
+async function deleteSchedule(id) {
+  if (!confirm('Delete this scheduled task?')) return;
+  await apiFetch(`/api/schedules/${id}`, {method:'DELETE'});
+  loadSchedules();
+  toast('Task deleted', 'success');
+}
 
-    async function loadModels() {
-        try {
-            const res = await apiFetch('/api/models');
-            if (res.status === 401) { showLogin(); return; }
-            const data = await res.json();
-            const select = document.getElementById('modelSelect');
-            select.innerHTML = '';
-            const current = data.current || {};
-            (data.models || []).forEach(m => {
-                const o = document.createElement('option');
-                o.value = m.name;
-                o.textContent = m.name + ' [' + m.provider + ']';
-                if (m.name === current.model) o.selected = true;
-                select.appendChild(o);
-            });
-        } catch(e) { console.error('Load models:', e); }
-    }
+// ── Conversations ──────────────────────────────────
+async function loadConversations() {
+  const data = await apiFetch('/api/conversations');
+  if (!data) return;
+  const list = document.getElementById('conv-list');
+  const convs = data.conversations || [];
+  list.innerHTML = convs.map(c => `
+    <div class="conv-item" data-id="${c.id}" onclick="loadConversation('${c.id}')">
+      <span>💬</span>
+      <span class="conv-title">${escapeHtml(c.title || 'Untitled')}</span>
+      <span class="conv-delete" onclick="event.stopPropagation();deleteConv('${c.id}')">✕</span>
+    </div>`).join('') || '';
+}
 
-    async function saveSettings() {
-        const model = document.getElementById('modelSelect').value;
-        if (model) {
-            try { await apiFetch('/api/model/' + encodeURIComponent(model), { method: 'POST' }); } catch(e) {}
-        }
-        // Save API keys
-        for (const p of ['openai', 'anthropic', 'gemini', 'stability']) {
-            const elId = 'key' + p.charAt(0).toUpperCase() + p.slice(1);
-            const input = document.getElementById(elId);
-            if (input && input.value.trim()) {
-                try {
-                    await apiFetch('/api/settings/apikey', {
-                        method: 'POST',
-                        body: JSON.stringify({ provider: p, api_key: input.value.trim() })
-                    });
-                    input.value = '';
-                } catch(e) {}
-            }
-        }
-        // Save image gen settings
-        const imgProvider = document.getElementById('imageProviderSelect').value;
-        const imgModel = document.getElementById('imageModelSelect').value;
-        try {
-            await apiFetch('/api/settings/image_gen', {
-                method: 'POST',
-                body: JSON.stringify({ provider: imgProvider, model: imgModel })
-            });
-        } catch(e) {}
-        toggleSettings();
-        loadStatus();
-        // Refresh model list — cloud models appear after API keys are saved
-        loadModels();
-    }
+async function loadConversation(id) {
+  const data = await apiFetch(`/api/conversations/${id}/load`, {method:'POST'});
+  if (!data) return;
+  // Clear messages and re-render
+  const container = document.getElementById('messages');
+  container.innerHTML = '';
+  (data.messages || []).forEach(m => appendMessage(m.role, m.content));
+  // Highlight in sidebar
+  document.querySelectorAll('.conv-item').forEach(el => el.classList.toggle('active', el.dataset.id === id));
+  switchView('chat');
+}
 
-    async function clearChat() {
-        if (!confirm('Clear conversation?')) return;
-        await apiFetch('/api/clear', { method: 'POST' });
-        localStorage.removeItem('winston_current_conv');
-        newConversation();
-    }
-    </script>
+async function newConversation() {
+  await apiFetch('/api/conversations/new', {method:'POST'});
+  document.getElementById('messages').innerHTML = `
+    <div class="welcome" id="welcome">
+      <div class="welcome-logo">🎩</div>
+      <h2>New Conversation</h2>
+      <p>How can I help you?</p>
+    </div>`;
+  document.querySelectorAll('.conv-item').forEach(el => el.classList.remove('active'));
+  switchView('chat');
+  loadConversations();
+}
+
+async function deleteConv(id) {
+  await apiFetch(`/api/conversations/${id}`, {method:'DELETE'});
+  loadConversations();
+}
+
+async function clearChat() {
+  await apiFetch('/api/clear', {method:'POST'});
+  document.getElementById('messages').innerHTML = '';
+  toast('Chat cleared', 'info');
+}
+
+// ── Utils ──────────────────────────────────────────
+function escapeHtml(s) {
+  if (!s) return '';
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+function copyCode(btn) {
+  const block = btn.parentElement;
+  const text = block.textContent.replace('Copy','').replace('Copied!','').trim();
+  navigator.clipboard.writeText(text);
+  btn.textContent = 'Copied!';
+  setTimeout(() => btn.textContent = 'Copy', 2000);
+}
+
+function toast(msg, type='info') {
+  const container = document.getElementById('toasts');
+  const t = document.createElement('div');
+  t.className = `toast toast-${type}`;
+  t.textContent = msg;
+  container.appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+}
+</script>
 </body>
 </html>

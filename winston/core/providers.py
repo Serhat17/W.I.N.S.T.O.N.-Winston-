@@ -182,6 +182,12 @@ class OpenAIProvider(LLMProvider):
         "o1", "o1-mini", "o1-preview", "o3-mini",
     ]
 
+    # Models that require max_completion_tokens instead of max_tokens
+    _NEW_TOKEN_PARAM_MODELS = {"gpt-5", "gpt-5.", "o1", "o3", "o4"}
+
+    def _use_new_tokens_param(self) -> bool:
+        return any(self.model.startswith(p) for p in self._NEW_TOKEN_PARAM_MODELS)
+
     def __init__(self, api_key: str, model: str = "gpt-4o-mini", base_url: str = "https://api.openai.com/v1"):
         self.api_key = api_key
         self.model = model
@@ -210,15 +216,20 @@ class OpenAIProvider(LLMProvider):
             else:
                 processed_messages.append(msg)
 
+        payload = {
+            "model": self.model,
+            "messages": processed_messages,
+            "temperature": temperature,
+        }
+        if self._use_new_tokens_param():
+            payload["max_completion_tokens"] = max_tokens
+        else:
+            payload["max_tokens"] = max_tokens
+
         response = self.client.post(
             f"{self.base_url}/chat/completions",
             headers=self._headers(),
-            json={
-                "model": self.model,
-                "messages": processed_messages,
-                "temperature": temperature,
-                "max_tokens": max_tokens,
-            },
+            json=payload,
         )
         response.raise_for_status()
         data = response.json()
@@ -244,15 +255,20 @@ class OpenAIProvider(LLMProvider):
             else:
                 processed_messages.append(msg)
 
+        payload = {
+            "model": self.model,
+            "messages": processed_messages,
+            "temperature": temperature,
+        }
+        if self._use_new_tokens_param():
+            payload["max_completion_tokens"] = max_tokens
+        else:
+            payload["max_tokens"] = max_tokens
+
         response = await self.async_client.post(
             f"{self.base_url}/chat/completions",
             headers=self._headers(),
-            json={
-                "model": self.model,
-                "messages": processed_messages,
-                "temperature": temperature,
-                "max_tokens": max_tokens,
-            },
+            json=payload,
         )
         response.raise_for_status()
         data = response.json()
@@ -265,17 +281,20 @@ class OpenAIProvider(LLMProvider):
         return data["choices"][0]["message"]["content"]
 
     def chat_stream(self, messages: list[dict], temperature: float = 0.7, max_tokens: int = 4096) -> Generator[str, None, None]:
+        token_key = ("max_completion_tokens" if self._use_new_tokens_param()
+                     else "max_tokens")
+        payload = {
+            "model": self.model,
+            "messages": messages,
+            "temperature": temperature,
+            token_key: max_tokens,
+            "stream": True,
+        }
         with self.client.stream(
             "POST",
             f"{self.base_url}/chat/completions",
             headers=self._headers(),
-            json={
-                "model": self.model,
-                "messages": messages,
-                "temperature": temperature,
-                "max_tokens": max_tokens,
-                "stream": True,
-            },
+            json=payload,
         ) as response:
             for line in response.iter_lines():
                 if line.startswith("data: "):
@@ -291,17 +310,20 @@ class OpenAIProvider(LLMProvider):
                         continue
 
     async def chat_stream_async(self, messages: list[dict], temperature: float = 0.7, max_tokens: int = 4096):
+        token_key = ("max_completion_tokens" if self._use_new_tokens_param()
+                     else "max_tokens")
+        payload = {
+            "model": self.model,
+            "messages": messages,
+            "temperature": temperature,
+            token_key: max_tokens,
+            "stream": True,
+        }
         async with self.async_client.stream(
             "POST",
             f"{self.base_url}/chat/completions",
             headers=self._headers(),
-            json={
-                "model": self.model,
-                "messages": messages,
-                "temperature": temperature,
-                "max_tokens": max_tokens,
-                "stream": True,
-            },
+            json=payload,
         ) as response:
             async for line in response.aiter_lines():
                 if line.startswith("data: "):

@@ -19,6 +19,8 @@ def winston():
         # Consistent mock for parse_skill_calls
         # This allows us to set the return value in individual tests
         w.brain.parse_skill_calls.return_value = []
+        # strip_skill_blocks should behave like the real method (return input as-is)
+        w.brain.strip_skill_blocks.side_effect = lambda x: x
         
         # Mock safety to avoid external checks and return concrete strings
         w.safety = MagicMock()
@@ -76,12 +78,14 @@ def test_mach_vorsichtig_triggers_screenshot_and_confirmation(winston):
     """
     # 0. process_input check
     # 1. First loop: output 'click'
-    # 2. Second loop: output nothing (done)
+    # 2. Second loop: output nothing (done) — but short reply triggers retry
+    # 3. Third loop: longer reply → agent considers task complete
     call_click = [{"skill": "browser", "parameters": {"action": "click", "selector": "#submit"}}]
     winston.brain.parse_skill_calls.side_effect = [
         call_click, # Consumed by main.py
         call_click, # Consumed by InteractiveBrowserAgent step 1
-        []          # Consumed by InteractiveBrowserAgent step 2
+        [],         # Consumed by InteractiveBrowserAgent step 2 (short → retry)
+        [],         # Consumed by InteractiveBrowserAgent step 3 (complete)
     ]
     
     action_req = MagicMock(id="test_id", risk_level=RiskLevel.SAFE, approved=False, description="Click submit")
@@ -92,7 +96,13 @@ def test_mach_vorsichtig_triggers_screenshot_and_confirmation(winston):
         SkillResult(success=True, message="Screenshot taken", data={"path": "test.png"}),
         SkillResult(success=True, message="Clicked")
     ]
-    winston.brain.think.return_value = "Summary"
+    # First calls return short "Summary", final call returns a long completion message
+    winston.brain.think.side_effect = [
+        "Summary",  # main.py initial think
+        "Summary",  # agent step 1
+        "Summary",  # agent step 2 (retry because < 20 chars)
+        "Task completed — form successfully submitted.",  # agent step 3 (>= 20 chars → done)
+    ]
     
     winston.process_input("mach vorsichtig: click submit")
     
@@ -118,7 +128,8 @@ def test_interactive_browser_loop_adapts_to_failure(winston):
         call_wrong, # Consumed by main.py check
         call_wrong, # Consumed by InteractiveBrowserAgent step 1
         call_right, # Consumed by InteractiveBrowserAgent step 2
-        []          # Consumed by InteractiveBrowserAgent step 3
+        [],         # Consumed by InteractiveBrowserAgent step 3 (short → retry)
+        [],         # Consumed by InteractiveBrowserAgent step 4 (complete)
     ]
 
     winston._skills["browser"].execute.side_effect = [
@@ -128,6 +139,13 @@ def test_interactive_browser_loop_adapts_to_failure(winston):
 
     action_req = MagicMock(risk_level=RiskLevel.SAFE, approved=True)
     winston.safety.request_action.return_value = action_req
+    winston.brain.think.side_effect = [
+        "Summary",  # main.py initial think
+        "Summary",  # agent step 1
+        "Summary",  # agent step 2
+        "Summary",  # agent step 3 (retry because < 20 chars)
+        "Task completed — element was clicked successfully.",  # agent step 4 (>= 20 chars → done)
+    ]
 
     winston.process_input("mach: try clicking")
 
