@@ -54,6 +54,80 @@ echo -e "${BOLD}║  Your AI Assistant — Private & Local      ║${NC}"
 echo -e "${BOLD}╚══════════════════════════════════════════╝${NC}"
 echo ""
 
+# ── Docker Compose shortcut ──────────────────────────
+# If Docker is available, offer the container-based install path.
+INSTALL_METHOD="native"
+
+if command -v docker &>/dev/null && docker compose version &>/dev/null 2>&1; then
+    echo -e "  Docker detected. How do you want to install Winston?\n"
+    echo -e "    ${BOLD}1)${NC} Docker Compose  (recommended — isolated, one-command start)"
+    echo -e "    ${BOLD}2)${NC} Native install   (system Python + Homebrew/apt packages)"
+    echo ""
+    read -rp "  Choice [1]: " INSTALL_CHOICE
+    INSTALL_CHOICE="${INSTALL_CHOICE:-1}"
+
+    if [[ "$INSTALL_CHOICE" == "1" ]]; then
+        INSTALL_METHOD="docker"
+    fi
+fi
+
+if [[ "$INSTALL_METHOD" == "docker" ]]; then
+    info "Installing via Docker Compose..."
+
+    # Clone / update repo
+    if [[ -d "$INSTALL_DIR/.git" ]]; then
+        info "Updating existing installation..."
+        cd "$INSTALL_DIR"
+        git pull --ff-only 2>/dev/null || warn "Could not auto-update. Continuing with existing version..."
+    elif [[ -d "$INSTALL_DIR" ]]; then
+        BACKUP_DIR="${INSTALL_DIR}.backup.$(date +%s)"
+        warn "Backing up existing $INSTALL_DIR to $BACKUP_DIR..."
+        mv "$INSTALL_DIR" "$BACKUP_DIR"
+        git clone "$REPO_URL" "$INSTALL_DIR"
+        cd "$INSTALL_DIR"
+    else
+        git clone "$REPO_URL" "$INSTALL_DIR"
+        cd "$INSTALL_DIR"
+    fi
+
+    # Create .env if missing
+    if [[ ! -f ".env" ]]; then
+        cat > .env <<'ENVEOF'
+# W.I.N.S.T.O.N. Docker environment
+# Uncomment and set any tokens / keys you need.
+# TELEGRAM_BOT_TOKEN=
+# DISCORD_BOT_TOKEN=
+# OPENAI_API_KEY=
+# ELEVENLABS_API_KEY=
+# OLLAMA_MODEL=qwen2.5:7b
+# WINSTON_PORT=8000
+ENVEOF
+        ok "Created .env template — edit it to add tokens/keys"
+    fi
+
+    info "Building and starting containers (first run pulls ~4 GB model)..."
+    docker compose up -d --build
+
+    echo ""
+    echo -e "${GREEN}╔══════════════════════════════════════════╗${NC}"
+    echo -e "${GREEN}║    Docker installation complete!          ║${NC}"
+    echo -e "${GREEN}╚══════════════════════════════════════════╝${NC}"
+    echo ""
+    echo -e "  ${BOLD}Web UI:${NC}       ${BLUE}http://localhost:${WINSTON_PORT:-8000}${NC}"
+    echo -e "  ${BOLD}Ollama API:${NC}   ${BLUE}http://localhost:11434${NC}"
+    echo ""
+    echo -e "  ${BOLD}Manage:${NC}"
+    echo -e "    docker compose logs -f          — view logs"
+    echo -e "    docker compose restart winston   — restart Winston"
+    echo -e "    docker compose down              — stop everything"
+    echo -e "    docker compose up -d             — start again"
+    echo ""
+    echo -e "  ${BOLD}Config:${NC} edit ${BLUE}$INSTALL_DIR/.env${NC} for tokens, then:"
+    echo -e "    docker compose restart winston"
+    echo ""
+    exit 0
+fi
+
 # ── Step 1: System package manager ────────────────────
 info "Step 1/6: Checking system dependencies..."
 
@@ -321,4 +395,7 @@ echo -e "  ${BOLD}Modes:${NC}"
 echo -e "    winston              → CLI chat"
 echo -e "    winston --mode server → Web UI + Telegram + Discord"
 echo -e "    winston --mode voice  → Microphone + Speaker"
+echo ""
+echo -e "  ${BOLD}Docker alternative:${NC}"
+echo -e "    cd $INSTALL_DIR && docker compose up -d"
 echo ""

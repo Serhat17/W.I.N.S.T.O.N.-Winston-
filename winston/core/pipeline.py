@@ -209,9 +209,11 @@ def refine_response(brain, sanitized: str, skill_results: List[SkillResult], con
     return brain.think(
         f"The user asked: {sanitized}\n\n"
         f"Here are the actual results from the system:\n{results_text}\n\n"
-        f"Now respond naturally to the user based on these results. "
+        f"Respond to the user based ONLY on the data above. "
+        f"Do NOT invent, guess, or add any information that is not in the results. "
+        f"If the results contain specific numbers (temperatures, percentages, etc.), use EXACTLY those numbers. "
         f"Do NOT output any JSON blocks. Do NOT use skill calls. "
-        f"Just give a clean, natural language summary.",
+        f"Just give a clean, natural language summary using only the provided data.",
         conversation_history=context,
     )
 

@@ -18,7 +18,7 @@ class OllamaConfig:
     vision_model: str = "llama3.2-vision"  # Vision model (fast, accurate multimodal)
     vision_mode: str = "direct"  # "direct" = single multimodal model (fast), "two-step" = separate vision+text models (slow)
     temperature: float = 0.7
-    context_window: int = 32768
+    context_window: int = 8192
     system_prompt: str = (
         "You are W.I.N.S.T.O.N., an advanced AI assistant inspired by the AI from Iron Man. "
         "You are helpful, witty, and highly capable. You speak in a professional yet friendly tone, "
@@ -205,6 +205,19 @@ class ChannelsConfig:
 
 
 @dataclass
+class PrivacyConfig:
+    """Privacy settings for cloud LLM communication."""
+    pii_redaction: bool = True       # Master switch for PII redaction
+    redact_emails: bool = True
+    redact_phones: bool = True
+    redact_addresses: bool = True
+    redact_financial: bool = True     # IBAN, credit cards
+    redact_ids: bool = True           # SSN, Steuer-ID, passport
+    redact_names: bool = True         # User-defined names from identity
+    log_redactions: bool = False      # Log when something gets redacted
+
+
+@dataclass
 class SchedulerConfig:
     """Scheduler configuration for cron jobs and heartbeats."""
     enabled: bool = True
@@ -232,6 +245,7 @@ class WinstonConfig:
     google_calendar: GoogleCalendarConfig = field(default_factory=GoogleCalendarConfig)
     providers: ProvidersConfig = field(default_factory=ProvidersConfig)
     fallback: FallbackConfig = field(default_factory=FallbackConfig)
+    privacy: PrivacyConfig = field(default_factory=PrivacyConfig)
     image_provider: str = "pollinations"  # "openai", "stability", "pollinations"
     image_model: str = "dall-e-3"
     debug: bool = False
@@ -432,3 +446,41 @@ def load_config(config_path: str = None) -> WinstonConfig:
         config.tts.engine = "elevenlabs"
 
     return config
+
+
+def save_env_value(key: str, value: str) -> None:
+    """Persist a key=value pair to the project .env file.
+
+    Creates the file if it doesn't exist.  Updates an existing key
+    in-place, or appends it at the end.  Values are never quoted
+    unless they contain whitespace.
+    """
+    env_path = Path(__file__).parent.parent / ".env"
+
+    lines: list[str] = []
+    if env_path.exists():
+        lines = env_path.read_text().splitlines(keepends=True)
+
+    # Escape the value only if it contains spaces or special chars
+    safe_val = value
+    if " " in value or '"' in value or "'" in value:
+        safe_val = '"' + value.replace('"', '\\"') + '"'
+
+    new_line = f"{key}={safe_val}\n"
+    found = False
+    for i, line in enumerate(lines):
+        stripped = line.lstrip()
+        if stripped.startswith(f"{key}=") or stripped.startswith(f"# {key}="):
+            lines[i] = new_line
+            found = True
+            break
+
+    if not found:
+        # Ensure there's a trailing newline before appending
+        if lines and not lines[-1].endswith("\n"):
+            lines[-1] += "\n"
+        lines.append(new_line)
+
+    env_path.write_text("".join(lines))
+    # Also set in the running process so load_config picks it up
+    os.environ[key] = value

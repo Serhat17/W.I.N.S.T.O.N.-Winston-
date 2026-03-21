@@ -25,7 +25,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
-from winston.config import WinstonConfig, load_config
+from winston.config import WinstonConfig, load_config, save_env_value
 from winston.core.brain import Brain
 from winston.core.listener import Listener
 from winston.core.memory import Memory
@@ -57,6 +57,7 @@ from winston.skills.image_gen_skill import ImageGenerationSkill
 from winston.skills.web_fetch_skill import WebFetchSkill
 from winston.skills.browser_skill import BrowserSkill
 from winston.skills.knowledge_base_skill import KnowledgeBaseSkill
+from winston.skills.weather_skill import WeatherSkill
 from winston.skills.shopping_skill import ShoppingSkill
 from winston.core.conversations import ConversationStore
 from winston.core.routines import RoutineManager
@@ -185,6 +186,7 @@ class WinstonServer:
             BrowserSkill(),
             KnowledgeBaseSkill(),
             ImageGenerationSkill(self.config),
+            WeatherSkill(),
         ]:
             self.skills[skill.name] = skill
 
@@ -407,7 +409,6 @@ class WinstonServer:
             # Authenticated
             self._authenticated_ws[websocket] = session
             self._active_connections.append(websocket)
-            await websocket.send_json({"type": "auth_ok", "session": session})
 
             # Resume existing conversation if client provides one, otherwise create new
             resume_conv_id = auth_data.get("conversation_id")
@@ -418,11 +419,15 @@ class WinstonServer:
                 self.memory.clear_session()
                 for msg in conv.get("messages", []):
                     self.memory.add_message(msg["role"], msg["content"])
+                await websocket.send_json({"type": "auth_ok", "session": session, "conversation_id": resume_conv_id})
                 # No greeting on resume — user already knows who we are
             else:
                 if session not in self._session_conversations:
                     conv_id = self.conversations.create_conversation()
                     self._session_conversations[session] = conv_id
+
+                active_conv_id = self._session_conversations.get(session)
+                await websocket.send_json({"type": "auth_ok", "session": session, "conversation_id": active_conv_id})
 
                 # Send greeting only for new conversations
                 greeting = (
@@ -500,7 +505,17 @@ class WinstonServer:
                     # Send "thinking" indicator
                     await websocket.send_json({"type": "thinking"})
 
-                    # Process with safety checks (in thread to avoid blocking)
+                    # ── Streaming path for simple chat (no skills needed) ──
+                    # We attempt streaming first; if the response contains skill
+                    # calls, we fall back to the full pipeline.
+                    if not images:
+                        streamed = await self._try_streaming_response(
+                            websocket, session, user_input, conv_id
+                        )
+                        if streamed:
+                            continue
+
+                    # ── Full pipeline with skill execution (non-streaming) ──
                     result = await asyncio.to_thread(
                         self._process_input_safe, user_input, websocket, images, None, True
                     )
@@ -580,13 +595,25 @@ class WinstonServer:
 
         @app.post("/api/settings/apikey")
         async def set_api_key(request: Request, token: str = Depends(require_auth)):
-            """Set an API key for a cloud provider."""
+            """Set an API key for a cloud provider and persist to .env."""
             body = await request.json()
             provider = body.get("provider", "")
             api_key = body.get("api_key", "")
             if not provider or not api_key:
                 raise HTTPException(status_code=400, detail="provider and api_key required")
             self.brain.set_api_key(provider, api_key)
+            # Persist to .env
+            env_map = {
+                "openai": "OPENAI_API_KEY", "anthropic": "ANTHROPIC_API_KEY",
+                "google": "GEMINI_API_KEY", "gemini": "GEMINI_API_KEY",
+                "deepseek": "DEEPSEEK_API_KEY", "openrouter": "OPENROUTER_API_KEY",
+                "mistral": "MISTRAL_API_KEY", "xai": "XAI_API_KEY",
+                "perplexity": "PERPLEXITY_API_KEY", "huggingface": "HUGGINGFACE_API_KEY",
+                "stability": "STABILITY_API_KEY", "elevenlabs": "WINSTON_ELEVENLABS_KEY",
+            }
+            env_key = env_map.get(provider)
+            if env_key:
+                save_env_value(env_key, api_key)
             return {"status": "ok", "provider": provider}
 
         @app.get("/api/settings/apikeys")
@@ -607,6 +634,205 @@ class WinstonServer:
                 self.skills["image_gen"].default_provider = provider
                 self.skills["image_gen"].default_model = model
             return {"status": "ok", "provider": provider, "model": model}
+
+        # ── Channel & Integration Settings (Web UI configurable) ──
+
+        @app.get("/api/settings/channels")
+        async def get_channel_settings(token: str = Depends(require_auth)):
+            """Return current channel & integration config (tokens masked)."""
+            def mask(val: str) -> str:
+                if not val:
+                    return ""
+                if len(val) <= 8:
+                    return "••••"
+                return val[:4] + "•" * (len(val) - 8) + val[-4:]
+
+            return {
+                "telegram": {
+                    "enabled": self.config.channels.telegram.enabled,
+                    "bot_token": mask(self.config.channels.telegram.bot_token),
+                    "has_token": bool(self.config.channels.telegram.bot_token),
+                    "default_chat_id": self.config.channels.telegram.default_chat_id,
+                },
+                "discord": {
+                    "enabled": self.config.channels.discord.enabled,
+                    "bot_token": mask(self.config.channels.discord.bot_token),
+                    "has_token": bool(self.config.channels.discord.bot_token),
+                    "default_channel_id": self.config.channels.discord.default_channel_id,
+                },
+                "whatsapp": {
+                    "enabled": self.config.channels.whatsapp.enabled,
+                    "waha_url": self.config.channels.whatsapp.waha_url,
+                    "has_api_key": bool(self.config.channels.whatsapp.waha_api_key),
+                },
+                "email": {
+                    "smtp_server": self.config.email.smtp_server,
+                    "email": self.config.email.email,
+                    "has_password": bool(self.config.email.password),
+                },
+                "elevenlabs": {
+                    "has_key": bool(self.config.tts.elevenlabs_api_key),
+                    "voice_id": self.config.tts.elevenlabs_voice_id,
+                },
+                "ollama": {
+                    "host": self.config.ollama.host,
+                    "model": self.config.ollama.model,
+                },
+            }
+
+        @app.post("/api/settings/channels")
+        async def save_channel_settings(request: Request, token: str = Depends(require_auth)):
+            """Save channel & integration settings. Persists to .env and updates live config."""
+            body = await request.json()
+            updated = []
+
+            # ── Telegram ──
+            tg = body.get("telegram")
+            if tg:
+                tok = tg.get("bot_token", "").strip()
+                if tok:
+                    save_env_value("WINSTON_TELEGRAM_TOKEN", tok)
+                    self.config.channels.telegram.bot_token = tok
+                    self.config.channels.telegram.enabled = True
+                    updated.append("telegram")
+                chat_id = tg.get("default_chat_id", "").strip()
+                if chat_id:
+                    self.config.channels.telegram.default_chat_id = chat_id
+
+            # ── Discord ──
+            dc = body.get("discord")
+            if dc:
+                tok = dc.get("bot_token", "").strip()
+                if tok:
+                    save_env_value("WINSTON_DISCORD_TOKEN", tok)
+                    self.config.channels.discord.bot_token = tok
+                    self.config.channels.discord.enabled = True
+                    updated.append("discord")
+                ch_id = dc.get("default_channel_id", "").strip()
+                if ch_id:
+                    self.config.channels.discord.default_channel_id = ch_id
+
+            # ── WhatsApp ──
+            wa = body.get("whatsapp")
+            if wa:
+                url = wa.get("waha_url", "").strip()
+                if url:
+                    save_env_value("WINSTON_WAHA_URL", url)
+                    self.config.channels.whatsapp.waha_url = url
+                api_key = wa.get("waha_api_key", "").strip()
+                if api_key:
+                    save_env_value("WINSTON_WAHA_API_KEY", api_key)
+                    self.config.channels.whatsapp.waha_api_key = api_key
+                    self.config.channels.whatsapp.enabled = True
+                    updated.append("whatsapp")
+
+            # ── Email ──
+            em = body.get("email")
+            if em:
+                for field, env_key in [
+                    ("smtp_server", "WINSTON_SMTP_SERVER"),
+                    ("email", "WINSTON_EMAIL"),
+                    ("password", "WINSTON_EMAIL_PASSWORD"),
+                    ("imap_server", "WINSTON_IMAP_SERVER"),
+                ]:
+                    val = em.get(field, "").strip()
+                    if val:
+                        save_env_value(env_key, val)
+                        setattr(self.config.email, field, val)
+                        if field not in updated:
+                            updated.append("email")
+
+            # ── ElevenLabs TTS ──
+            el = body.get("elevenlabs")
+            if el:
+                key = el.get("api_key", "").strip()
+                if key:
+                    save_env_value("WINSTON_ELEVENLABS_KEY", key)
+                    self.config.tts.elevenlabs_api_key = key
+                    self.config.tts.engine = "elevenlabs"
+                    updated.append("elevenlabs")
+                vid = el.get("voice_id", "").strip()
+                if vid:
+                    save_env_value("WINSTON_ELEVENLABS_VOICE", vid)
+                    self.config.tts.elevenlabs_voice_id = vid
+
+            # ── Ollama ──
+            ol = body.get("ollama")
+            if ol:
+                host = ol.get("host", "").strip()
+                if host:
+                    save_env_value("OLLAMA_HOST", host)
+                    self.config.ollama.host = host
+                    updated.append("ollama")
+                model = ol.get("model", "").strip()
+                if model:
+                    save_env_value("OLLAMA_MODEL", model)
+                    self.config.ollama.model = model
+
+            needs_restart = bool({"telegram", "discord", "whatsapp"} & set(updated))
+            return {
+                "status": "ok",
+                "updated": updated,
+                "restart_required": needs_restart,
+                "message": "Settings saved to .env. " + (
+                    "Restart Winston to activate channel changes." if needs_restart else "Applied immediately."
+                ),
+            }
+
+        # ── Privacy / PII Settings ──
+
+        @app.get("/api/settings/privacy")
+        async def get_privacy_settings(token: str = Depends(require_auth)):
+            """Return current PII redaction settings and stats."""
+            guard = self.brain.pii_guard
+            categories = guard.get_categories()
+            return {
+                "enabled": guard.enabled,
+                "categories": categories,
+                "stats": guard.get_stats(),
+            }
+
+        @app.post("/api/settings/privacy")
+        async def save_privacy_settings(request: Request, token: str = Depends(require_auth)):
+            """Update PII redaction settings."""
+            body = await request.json()
+            guard = self.brain.pii_guard
+
+            # Master switch
+            if "enabled" in body:
+                enabled = bool(body["enabled"])
+                guard.enabled = enabled
+                self.config.privacy.pii_redaction = enabled
+                save_env_value("WINSTON_PII_REDACTION", "true" if enabled else "false")
+
+            # Per-category toggles
+            cat_map = body.get("categories", {})
+            config_field_map = {
+                "email": "redact_emails",
+                "phone": "redact_phones",
+                "address_de": "redact_addresses",
+                "address_us": "redact_addresses",
+                "iban": "redact_financial",
+                "credit_card": "redact_financial",
+                "steuer_id": "redact_ids",
+                "ssn": "redact_ids",
+                "passport": "redact_ids",
+            }
+            for cat_name, enabled in cat_map.items():
+                guard.set_pattern_enabled(cat_name, bool(enabled))
+                cfg_field = config_field_map.get(cat_name)
+                if cfg_field:
+                    setattr(self.config.privacy, cfg_field, bool(enabled))
+
+            # Reset stats if requested
+            if body.get("reset_stats"):
+                guard.reset_stats()
+
+            return {
+                "status": "ok",
+                "enabled": guard.enabled,
+                "categories": guard.get_categories(),
+            }
 
         # ── Conversations ──
 
@@ -645,7 +871,9 @@ class WinstonServer:
             # Remove session conversation mapping
             session_token = request.headers.get("Authorization", "").replace("Bearer ", "")
             self._session_conversations.pop(session_token, None)
-            return {"status": "ok"}
+            conv_id = self.conversations.create_conversation()
+            self._session_conversations[session_token] = conv_id
+            return {"status": "ok", "conversation_id": conv_id}
 
         @app.post("/api/conversations/{conv_id}/load")
         async def load_conversation(conv_id: str, request: Request, token: str = Depends(require_auth)):
@@ -905,6 +1133,8 @@ class WinstonServer:
 
                 if action_req.approved and skill_name in self.skills:
                     try:
+                        # Restore PII placeholders before local skill execution
+                        params = self.brain.pii_guard.restore_params(params)
                         result = self.skills[skill_name].execute(**params)
                         skill_results.append(result)
 
@@ -925,6 +1155,8 @@ class WinstonServer:
                     response = "I tried to process that, but couldn't complete the action."
 
         response = finalize_response(response, self.brain, self.safety)
+        # Restore PII placeholders so the user sees real data in replies
+        response = self.brain.pii_guard.restore(response)
         self.memory.add_message("assistant", response)
 
         if return_dict:
@@ -934,6 +1166,62 @@ class WinstonServer:
                 "data": [r.data for r in skill_results if r.data]
             }
         return response
+
+    async def _try_streaming_response(self, websocket, session: str, user_input: str, conv_id: Optional[str] = None) -> bool:
+        """Stream a response token-by-token over WebSocket.
+
+        Returns True if the response was fully streamed (no skill calls detected).
+        Returns False if skill calls were detected, so the caller should fall back
+        to the full (non-streaming) pipeline.
+        """
+        sanitized = self.safety.sanitize_input(user_input)
+        override, sanitized = parse_override(sanitized)
+
+        self.memory.auto_capture(sanitized)
+        self.memory.add_message("user", sanitized)
+        compact_memory(self.memory, self.brain, self.config.ollama.context_window)
+
+        context = self.memory.get_context_messages()
+        memory_context = self.memory.recall_relevant(sanitized)
+        enriched_input = f"{memory_context}\n\n{sanitized}" if memory_context else sanitized
+
+        full_response = ""
+        try:
+            async for token in self.brain.think_stream_async(enriched_input, conversation_history=context):
+                full_response += token
+
+                # If we detect a skill/JSON block starting, abort streaming
+                # and let the full pipeline handle it
+                if '```json' in full_response or '"skill"' in full_response:
+                    # Undo the user message we already added (will be re-added by _process_input_safe)
+                    if self.memory.conversation_history and self.memory.conversation_history[-1].get("role") == "user":
+                        self.memory.conversation_history.pop()
+                    return False
+
+                # Send each token to the frontend
+                await websocket.send_json({"type": "stream", "token": token})
+
+        except Exception as e:
+            logger.error(f"Streaming failed: {e}")
+            if self.memory.conversation_history and self.memory.conversation_history[-1].get("role") == "user":
+                self.memory.conversation_history.pop()
+            return False
+
+        # Streaming complete — finalize
+        full_response = finalize_response(full_response, self.brain, self.safety)
+
+        # Signal end of stream
+        await websocket.send_json({
+            "type": "stream_end",
+            "message": full_response,
+            "timestamp": datetime.now().isoformat(),
+        })
+
+        self.memory.add_message("assistant", full_response)
+        if conv_id:
+            self.conversations.save_message(conv_id, "assistant", full_response)
+
+        return True
 
     def _process_input_safe(self, user_input: str, websocket: WebSocket = None, images: list[str] = None, channel=None, return_dict: bool = False) -> Union[str, dict]:
         """Process input with full safety checks and WebSocket confirmation."""
@@ -1073,6 +1361,8 @@ class WinstonServer:
 
                 if skill_name in self.skills:
                     try:
+                        # Restore PII placeholders before local skill execution
+                        params = self.brain.pii_guard.restore_params(params)
                         result = self.skills[skill_name].execute(**params)
                         skill_results.append(result)
                         
@@ -1100,6 +1390,8 @@ class WinstonServer:
                     response = "I tried to process that, but couldn't complete the action."
 
         response = finalize_response(response, self.brain, self.safety)
+        # Restore PII placeholders so the user sees real data in replies
+        response = self.brain.pii_guard.restore(response)
         self.memory.add_message("assistant", response)
         
         if return_dict:

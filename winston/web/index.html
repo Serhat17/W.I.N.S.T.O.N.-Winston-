@@ -248,6 +248,14 @@ input,textarea,select{font-family:var(--font);outline:none}
 .setting-desc{font-size:12px;color:var(--text3);margin-top:2px}
 .setting-control{flex-shrink:0;display:flex;gap:8px;align-items:center}
 
+/* Toggle switch */
+.toggle{position:relative;display:inline-block;width:44px;height:24px}
+.toggle input{opacity:0;width:0;height:0}
+.toggle .slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:var(--bg4);border-radius:24px;transition:.3s}
+.toggle .slider::before{content:"";position:absolute;height:18px;width:18px;left:3px;bottom:3px;background:var(--text2);border-radius:50%;transition:.3s}
+.toggle input:checked+.slider{background:var(--accent)}
+.toggle input:checked+.slider::before{transform:translateX(20px);background:#fff}
+
 .input-field{
   padding:8px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);
   background:var(--bg3);color:var(--text);font-size:13px;width:260px;
@@ -501,6 +509,222 @@ input,textarea,select{font-family:var(--font);outline:none}
       </div>
     </div>
 
+    <!-- Telegram -->
+    <div class="panel-section">
+      <div class="panel-section-header"><span class="icon">📱</span><h3>Telegram</h3></div>
+      <div class="panel-section-body">
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-label">Bot Token</div>
+            <div class="setting-desc">From @BotFather on Telegram</div>
+          </div>
+          <div class="setting-control">
+            <span class="tag" id="tg-status"></span>
+            <input type="password" class="input-field mono" id="tg-token" placeholder="123456:ABC-DEF..." style="width:220px">
+          </div>
+        </div>
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-label">Default Chat ID</div>
+            <div class="setting-desc">Optional — auto-send messages to this chat</div>
+          </div>
+          <div class="setting-control">
+            <input type="text" class="input-field mono" id="tg-chat-id" placeholder="e.g. 123456789" style="width:180px">
+          </div>
+        </div>
+        <div class="setting-row" style="justify-content:flex-end">
+          <button class="btn btn-primary btn-sm" onclick="saveChannel('telegram')">Save Telegram</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Discord -->
+    <div class="panel-section">
+      <div class="panel-section-header"><span class="icon">🎮</span><h3>Discord</h3></div>
+      <div class="panel-section-body">
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-label">Bot Token</div>
+            <div class="setting-desc">From Discord Developer Portal</div>
+          </div>
+          <div class="setting-control">
+            <span class="tag" id="dc-status"></span>
+            <input type="password" class="input-field mono" id="dc-token" placeholder="Bot token..." style="width:220px">
+          </div>
+        </div>
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-label">Default Channel ID</div>
+            <div class="setting-desc">Optional — auto-send messages here</div>
+          </div>
+          <div class="setting-control">
+            <input type="text" class="input-field mono" id="dc-channel-id" placeholder="e.g. 1234567890" style="width:180px">
+          </div>
+        </div>
+        <div class="setting-row" style="justify-content:flex-end">
+          <button class="btn btn-primary btn-sm" onclick="saveChannel('discord')">Save Discord</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- WhatsApp -->
+    <div class="panel-section">
+      <div class="panel-section-header"><span class="icon">💬</span><h3>WhatsApp (WAHA)</h3></div>
+      <div class="panel-section-body">
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-label">WAHA Server URL</div>
+            <div class="setting-desc">Self-hosted WAHA API endpoint</div>
+          </div>
+          <div class="setting-control">
+            <input type="text" class="input-field mono" id="wa-url" placeholder="http://localhost:3000" style="width:220px">
+          </div>
+        </div>
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-label">WAHA API Key</div>
+            <div class="setting-desc">Authentication key for the WAHA server</div>
+          </div>
+          <div class="setting-control">
+            <span class="tag" id="wa-status"></span>
+            <input type="password" class="input-field mono" id="wa-api-key" placeholder="API key..." style="width:220px">
+          </div>
+        </div>
+        <div class="setting-row" style="justify-content:flex-end">
+          <button class="btn btn-primary btn-sm" onclick="saveChannel('whatsapp')">Save WhatsApp</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Email -->
+    <div class="panel-section">
+      <div class="panel-section-header"><span class="icon">📧</span><h3>Email (SMTP/IMAP)</h3></div>
+      <div class="panel-section-body">
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-label">SMTP Server</div>
+            <div class="setting-desc">e.g. smtp.gmail.com</div>
+          </div>
+          <div class="setting-control">
+            <input type="text" class="input-field" id="em-smtp" placeholder="smtp.gmail.com" style="width:220px">
+          </div>
+        </div>
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-label">IMAP Server</div>
+            <div class="setting-desc">e.g. imap.gmail.com</div>
+          </div>
+          <div class="setting-control">
+            <input type="text" class="input-field" id="em-imap" placeholder="imap.gmail.com" style="width:220px">
+          </div>
+        </div>
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-label">Email Address</div>
+          </div>
+          <div class="setting-control">
+            <input type="email" class="input-field" id="em-email" placeholder="you@gmail.com" style="width:220px">
+          </div>
+        </div>
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-label">App Password</div>
+            <div class="setting-desc">Use an app-specific password</div>
+          </div>
+          <div class="setting-control">
+            <span class="tag" id="em-status"></span>
+            <input type="password" class="input-field mono" id="em-password" placeholder="App password..." style="width:220px">
+          </div>
+        </div>
+        <div class="setting-row" style="justify-content:flex-end">
+          <button class="btn btn-primary btn-sm" onclick="saveChannel('email')">Save Email</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ElevenLabs TTS -->
+    <div class="panel-section">
+      <div class="panel-section-header"><span class="icon">🗣️</span><h3>ElevenLabs TTS</h3></div>
+      <div class="panel-section-body">
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-label">API Key</div>
+            <div class="setting-desc">For high-quality voice synthesis</div>
+          </div>
+          <div class="setting-control">
+            <span class="tag" id="el-status"></span>
+            <input type="password" class="input-field mono" id="el-api-key" placeholder="sk-..." style="width:220px">
+          </div>
+        </div>
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-label">Voice ID</div>
+            <div class="setting-desc">ElevenLabs voice identifier</div>
+          </div>
+          <div class="setting-control">
+            <input type="text" class="input-field mono" id="el-voice-id" placeholder="onwK4e9ZLuTAKqWW03F9" style="width:220px">
+          </div>
+        </div>
+        <div class="setting-row" style="justify-content:flex-end">
+          <button class="btn btn-primary btn-sm" onclick="saveChannel('elevenlabs')">Save ElevenLabs</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Ollama -->
+    <div class="panel-section">
+      <div class="panel-section-header"><span class="icon">🦙</span><h3>Ollama Connection</h3></div>
+      <div class="panel-section-body">
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-label">Ollama Host</div>
+            <div class="setting-desc">URL of the Ollama API</div>
+          </div>
+          <div class="setting-control">
+            <input type="text" class="input-field mono" id="ol-host" placeholder="http://localhost:11434" style="width:220px">
+          </div>
+        </div>
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-label">Default Model</div>
+            <div class="setting-desc">Model name for Ollama</div>
+          </div>
+          <div class="setting-control">
+            <input type="text" class="input-field mono" id="ol-model" placeholder="qwen2.5:7b" style="width:220px">
+          </div>
+        </div>
+        <div class="setting-row" style="justify-content:flex-end">
+          <button class="btn btn-primary btn-sm" onclick="saveChannel('ollama')">Save Ollama</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Privacy / PII Redaction -->
+    <div class="panel-section">
+      <div class="panel-section-header"><span class="icon">🔒</span><h3>Privacy (PII Redaction)</h3></div>
+      <div class="panel-section-body">
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-label">PII Redaction</div>
+            <div class="setting-desc">Automatically redact personal data before sending to cloud LLMs</div>
+          </div>
+          <div class="setting-control">
+            <label class="toggle"><input type="checkbox" id="pii-enabled" onchange="savePrivacySettings()"><span class="slider"></span></label>
+          </div>
+        </div>
+        <div id="pii-categories"></div>
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-label">Redaction Stats</div>
+            <div class="setting-desc" id="pii-stats">No redactions yet</div>
+          </div>
+          <div class="setting-control">
+            <button class="btn btn-secondary btn-sm" onclick="resetPiiStats()">Reset Stats</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- System Info -->
     <div class="panel-section">
       <div class="panel-section-header"><span class="icon">📊</span><h3>System Status</h3></div>
@@ -609,6 +833,7 @@ input,textarea,select{font-family:var(--font);outline:none}
 
 // ── State ──────────────────────────────────────────
 let session = localStorage.getItem('winston_session') || '';
+let currentConvId = localStorage.getItem('winston_conv_id') || null;
 let ws = null;
 let currentView = 'chat';
 let isThinking = false;
@@ -714,7 +939,9 @@ function connectWS() {
   ws = new WebSocket(`${proto}://${location.host}/ws`);
 
   ws.onopen = () => {
-    ws.send(JSON.stringify({type:'auth', session}));
+    const authMsg = {type:'auth', session};
+    if (currentConvId) authMsg.conversation_id = currentConvId;
+    ws.send(JSON.stringify(authMsg));
   };
 
   ws.onmessage = (e) => {
@@ -722,6 +949,10 @@ function connectWS() {
     switch(data.type) {
       case 'auth_ok':
         setStatus('online');
+        if (data.conversation_id) {
+          currentConvId = data.conversation_id;
+          localStorage.setItem('winston_conv_id', currentConvId);
+        }
         break;
       case 'auth_failed':
         setStatus('offline');
@@ -732,6 +963,15 @@ function connectWS() {
         break;
       case 'thinking':
         showTyping();
+        break;
+      case 'stream':
+        hideTyping();
+        appendStreamToken(data.token);
+        break;
+      case 'stream_end':
+        finalizeStreamMessage(data.message);
+        isThinking = false;
+        updateSendBtn();
         break;
       case 'response':
         hideTyping();
@@ -796,6 +1036,51 @@ function appendMessage(role, text, images) {
 
   container.appendChild(div);
   container.scrollTop = container.scrollHeight;
+}
+
+let _streamDiv = null;
+let _streamText = '';
+
+function appendStreamToken(token) {
+  const container = document.getElementById('messages');
+  if (!_streamDiv) {
+    const welcome = document.getElementById('welcome');
+    if (welcome) welcome.remove();
+    _streamDiv = document.createElement('div');
+    _streamDiv.className = 'message assistant fade-in';
+    const time = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+    _streamDiv.innerHTML = `
+      <div class="msg-avatar">🎩</div>
+      <div class="msg-content">
+        <div class="msg-bubble"></div>
+        <div class="msg-time">${time}</div>
+      </div>`;
+    container.appendChild(_streamDiv);
+    _streamText = '';
+  }
+  _streamText += token;
+  const bubble = _streamDiv.querySelector('.msg-bubble');
+  let html = escapeHtml(_streamText)
+    .replace(/```(\w*)\n?([\s\S]*?)```/g, '<pre><code>$2</code></pre>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>');
+  bubble.innerHTML = html;
+  container.scrollTop = container.scrollHeight;
+}
+
+function finalizeStreamMessage(fullText) {
+  if (_streamDiv) {
+    const bubble = _streamDiv.querySelector('.msg-bubble');
+    let html = escapeHtml(fullText)
+      .replace(/```(\w*)\n?([\s\S]*?)```/g, '<pre><code>$2</code></pre>')
+      .replace(/`([^`]+)`/g, '<code>$1</code>')
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.+?)\*/g, '<em>$1</em>');
+    bubble.innerHTML = html;
+  }
+  _streamDiv = null;
+  _streamText = '';
 }
 
 function showTyping() {
@@ -1015,8 +1300,10 @@ async function loadSettings() {
       </div>`;
   }
 
-  // Refresh status too
+  // Refresh status + channel settings + privacy
   loadStatus();
+  loadChannelSettings();
+  loadPrivacySettings();
 }
 
 async function saveApiKey(provider) {
@@ -1061,6 +1348,171 @@ async function setImageProvider() {
     method:'POST', body: JSON.stringify({provider})
   });
   toast(`Image provider: ${provider}`, 'success');
+}
+
+// ── Channel / Integration Settings ─────────────────
+async function loadChannelSettings() {
+  const data = await apiFetch('/api/settings/channels');
+  if (!data) return;
+
+  // Telegram
+  const tg = data.telegram || {};
+  document.getElementById('tg-status').className = 'tag ' + (tg.has_token ? 'tag-green' : 'tag-red');
+  document.getElementById('tg-status').textContent = tg.has_token ? '✓ Connected' : '✗ Not set';
+  document.getElementById('tg-chat-id').value = tg.default_chat_id || '';
+
+  // Discord
+  const dc = data.discord || {};
+  document.getElementById('dc-status').className = 'tag ' + (dc.has_token ? 'tag-green' : 'tag-red');
+  document.getElementById('dc-status').textContent = dc.has_token ? '✓ Connected' : '✗ Not set';
+  document.getElementById('dc-channel-id').value = dc.default_channel_id || '';
+
+  // WhatsApp
+  const wa = data.whatsapp || {};
+  document.getElementById('wa-status').className = 'tag ' + (wa.has_api_key ? 'tag-green' : 'tag-red');
+  document.getElementById('wa-status').textContent = wa.has_api_key ? '✓ Configured' : '✗ Not set';
+  document.getElementById('wa-url').value = wa.waha_url || '';
+
+  // Email
+  const em = data.email || {};
+  document.getElementById('em-status').className = 'tag ' + (em.has_password ? 'tag-green' : 'tag-red');
+  document.getElementById('em-status').textContent = em.has_password ? '✓ Configured' : '✗ Not set';
+  document.getElementById('em-smtp').value = em.smtp_server || '';
+  document.getElementById('em-email').value = em.email || '';
+
+  // ElevenLabs
+  const el = data.elevenlabs || {};
+  document.getElementById('el-status').className = 'tag ' + (el.has_key ? 'tag-green' : 'tag-red');
+  document.getElementById('el-status').textContent = el.has_key ? '✓ Configured' : '✗ Not set';
+  document.getElementById('el-voice-id').value = el.voice_id || '';
+
+  // Ollama
+  const ol = data.ollama || {};
+  document.getElementById('ol-host').value = ol.host || '';
+  document.getElementById('ol-model').value = ol.model || '';
+}
+
+// ── Privacy / PII Settings ─────────────────────────
+const PII_LABELS = {
+  email:'Emails', phone:'Phone Numbers', iban:'IBAN', credit_card:'Credit Cards',
+  steuer_id:'Tax IDs (DE)', ssn:'SSN (US)', passport:'Passport Numbers',
+  ipv4:'IP Addresses', date_of_birth:'Date of Birth', address_de:'Addresses (DE)',
+  address_us:'Addresses (US)', api_key:'API Keys/Tokens', private_key:'Private Keys',
+  password:'Passwords'
+};
+
+async function loadPrivacySettings() {
+  const data = await apiFetch('/api/settings/privacy');
+  if (!data) return;
+
+  document.getElementById('pii-enabled').checked = data.enabled;
+
+  const container = document.getElementById('pii-categories');
+  const cats = data.categories || [];
+  container.innerHTML = cats.map(c => `
+    <div class="setting-row">
+      <div class="setting-info">
+        <div class="setting-label">${PII_LABELS[c.name] || c.name}</div>
+        <div class="setting-desc">Replaced with ${c.replacement}</div>
+      </div>
+      <div class="setting-control">
+        <label class="toggle"><input type="checkbox" data-pii-cat="${c.name}" ${c.enabled ? 'checked' : ''} onchange="savePrivacySettings()"><span class="slider"></span></label>
+      </div>
+    </div>`).join('');
+
+  // Stats
+  const stats = data.stats || {};
+  const total = Object.values(stats).reduce((a, b) => a + b, 0);
+  const el = document.getElementById('pii-stats');
+  if (total > 0) {
+    const parts = Object.entries(stats).map(([k, v]) => `${PII_LABELS[k] || k}: ${v}`).join(', ');
+    el.textContent = `${total} redactions — ${parts}`;
+  } else {
+    el.textContent = 'No redactions yet';
+  }
+}
+
+async function savePrivacySettings() {
+  const enabled = document.getElementById('pii-enabled').checked;
+  const categories = {};
+  document.querySelectorAll('[data-pii-cat]').forEach(el => {
+    categories[el.dataset.piiCat] = el.checked;
+  });
+  const r = await apiFetch('/api/settings/privacy', {
+    method: 'POST',
+    body: JSON.stringify({ enabled, categories })
+  });
+  if (r?.status === 'ok') toast('Privacy settings updated', 'success');
+}
+
+async function resetPiiStats() {
+  await apiFetch('/api/settings/privacy', {
+    method: 'POST',
+    body: JSON.stringify({ reset_stats: true })
+  });
+  toast('Stats reset', 'success');
+  loadPrivacySettings();
+}
+
+async function saveChannel(section) {
+  const payload = {};
+
+  if (section === 'telegram') {
+    const tok = document.getElementById('tg-token').value.trim();
+    const chatId = document.getElementById('tg-chat-id').value.trim();
+    payload.telegram = {};
+    if (tok) payload.telegram.bot_token = tok;
+    if (chatId) payload.telegram.default_chat_id = chatId;
+  } else if (section === 'discord') {
+    const tok = document.getElementById('dc-token').value.trim();
+    const chId = document.getElementById('dc-channel-id').value.trim();
+    payload.discord = {};
+    if (tok) payload.discord.bot_token = tok;
+    if (chId) payload.discord.default_channel_id = chId;
+  } else if (section === 'whatsapp') {
+    const url = document.getElementById('wa-url').value.trim();
+    const key = document.getElementById('wa-api-key').value.trim();
+    payload.whatsapp = {};
+    if (url) payload.whatsapp.waha_url = url;
+    if (key) payload.whatsapp.waha_api_key = key;
+  } else if (section === 'email') {
+    payload.email = {
+      smtp_server: document.getElementById('em-smtp').value.trim(),
+      imap_server: document.getElementById('em-imap').value.trim(),
+      email: document.getElementById('em-email').value.trim(),
+      password: document.getElementById('em-password').value.trim(),
+    };
+  } else if (section === 'elevenlabs') {
+    payload.elevenlabs = {
+      api_key: document.getElementById('el-api-key').value.trim(),
+      voice_id: document.getElementById('el-voice-id').value.trim(),
+    };
+  } else if (section === 'ollama') {
+    payload.ollama = {
+      host: document.getElementById('ol-host').value.trim(),
+      model: document.getElementById('ol-model').value.trim(),
+    };
+  }
+
+  const r = await apiFetch('/api/settings/channels', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+
+  if (r?.status === 'ok') {
+    toast(r.message || `${section} saved`, 'success');
+    if (r.restart_required) {
+      toast('Restart Winston to activate channel changes', 'info');
+    }
+    loadChannelSettings();
+    // Clear password fields after save
+    document.querySelectorAll('#view-settings input[type=password]').forEach(el => {
+      if (el.id.startsWith('tg-') || el.id.startsWith('dc-') || el.id.startsWith('wa-') || el.id.startsWith('em-') || el.id.startsWith('el-'))
+        el.value = '';
+    });
+  } else {
+    toast('Failed to save settings', 'error');
+  }
 }
 
 // ── Load Skills ────────────────────────────────────
@@ -1141,6 +1593,8 @@ async function loadConversations() {
 async function loadConversation(id) {
   const data = await apiFetch(`/api/conversations/${id}/load`, {method:'POST'});
   if (!data) return;
+  currentConvId = id;
+  localStorage.setItem('winston_conv_id', id);
   // Clear messages and re-render
   const container = document.getElementById('messages');
   container.innerHTML = '';
@@ -1151,7 +1605,10 @@ async function loadConversation(id) {
 }
 
 async function newConversation() {
-  await apiFetch('/api/conversations/new', {method:'POST'});
+  const resp = await apiFetch('/api/conversations/new', {method:'POST'});
+  currentConvId = (resp && resp.conversation_id) || null;
+  if (currentConvId) localStorage.setItem('winston_conv_id', currentConvId);
+  else localStorage.removeItem('winston_conv_id');
   document.getElementById('messages').innerHTML = `
     <div class="welcome" id="welcome">
       <div class="welcome-logo">🎩</div>

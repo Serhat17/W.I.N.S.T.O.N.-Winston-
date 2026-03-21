@@ -1,0 +1,76 @@
+# ╔══════════════════════════════════════════════════╗
+# ║   W.I.N.S.T.O.N. — Docker Compose Stack          ║
+# ║   Start with:  docker compose up -d               ║
+# ╚══════════════════════════════════════════════════╝
+#
+# Services:
+#   winston  — AI assistant (Web UI on port 8000)
+#   ollama   — Local LLM engine (API on port 11434)
+#
+# First run pulls the default model automatically.
+
+services:
+  # ── Ollama (Local LLM) ─────────────────────────────
+  ollama:
+    image: ollama/ollama:latest
+    container_name: winston-ollama
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:11434/api/tags"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    # Uncomment for NVIDIA GPU support:
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+
+  # ── Model bootstrap (runs once, then exits) ────────
+  ollama-pull:
+    image: ollama/ollama:latest
+    container_name: winston-ollama-pull
+    depends_on:
+      ollama:
+        condition: service_healthy
+    restart: "no"
+    entrypoint: ["ollama", "pull", "${OLLAMA_MODEL:-qwen2.5:7b}"]
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+
+  # ── W.I.N.S.T.O.N. ─────────────────────────────────
+  winston:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: winston-app
+    restart: unless-stopped
+    depends_on:
+      ollama:
+        condition: service_healthy
+    ports:
+      - "${WINSTON_PORT:-8000}:8000"
+    volumes:
+      - winston_data:/app/data
+      - ./config:/app/config
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-qwen2.5:7b}
+      # Channel tokens — set in .env file or export before docker compose up
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
+      - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN:-}
+      # Optional API keys
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ELEVENLABS_API_KEY=${ELEVENLABS_API_KEY:-}
+
+volumes:
+  ollama_data:
+  winston_data:

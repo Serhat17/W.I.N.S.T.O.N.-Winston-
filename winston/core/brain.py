@@ -19,18 +19,9 @@ from winston.core.providers import (
 )
 from winston.core.usage_tracker import UsageTracker
 from winston.core.model_fallback import ProviderCooldown, run_with_fallback, classify_error, FailoverReason
+from winston.security.pii_guard import PIIGuard
 
 logger = logging.getLogger("winston.brain")
-
-
-    # Patterns that indicate sensitive data in conversation messages
-_SENSITIVE_CONTENT_PATTERNS = [
-    re.compile(r"(?i)password\s*[:=]\s*\S+"),
-    re.compile(r"(?i)(api[_-]?key|secret|token)\s*[:=]\s*\S+"),
-    re.compile(r"-----BEGIN[A-Z ]*PRIVATE KEY-----"),
-    re.compile(r"(?i)credit\s*card[\s:]*\d[\d\s-]{10,}"),
-    re.compile(r"(?i)ssn[\s:]*\d{3}-?\d{2}-?\d{4}"),
-]
 
 
 class Brain:
@@ -40,7 +31,11 @@ class Brain:
     """
 
     # Cloud providers that send data over the internet
-    CLOUD_PROVIDERS = {"openai", "anthropic", "gemini"}
+    CLOUD_PROVIDERS = {
+        "openai", "anthropic", "gemini", "deepseek", "openrouter",
+        "mistral", "xai", "perplexity", "huggingface", "minimax",
+        "glm", "vercel",
+    }
 
     def __init__(self, config: Union[OllamaConfig, WinstonConfig], identity=None):
         # Full WinstonConfig is preferred for multi-provider support
@@ -57,6 +52,14 @@ class Brain:
         self.async_client = httpx.AsyncClient(base_url=self.config.host, timeout=120.0)
         self.available_skills: dict = {}
         self.identity = identity  # IdentityManager for dynamic system prompts
+
+        # PII guard for cloud provider privacy
+        privacy_cfg = getattr(self.full_config, "privacy", None) if self.full_config else None
+        pii_enabled = privacy_cfg.pii_redaction if privacy_cfg else True
+        self.pii_guard = PIIGuard(enabled=pii_enabled)
+        if privacy_cfg:
+            self._apply_privacy_config(privacy_cfg)
+        self._init_pii_custom_names()
 
         # Usage tracking
         self.usage_tracker = UsageTracker()
@@ -136,15 +139,48 @@ class Brain:
 
     def _sanitize_messages_for_cloud(self, messages: list[dict]) -> list[dict]:
         """Remove sensitive data from conversation messages before sending to cloud.
-        Redacts passwords, API keys, private keys, and other secrets.
+        Uses PIIGuard for comprehensive PII redaction: emails, phones, addresses,
+        IBANs, credit cards, passwords, API keys, custom names, and more.
         """
-        sanitized = []
-        for msg in messages:
-            content = msg.get("content", "")
-            for pattern in _SENSITIVE_CONTENT_PATTERNS:
-                content = pattern.sub("[REDACTED]", content)
-            sanitized.append({**msg, "content": content})
-        return sanitized
+        return self.pii_guard.redact_messages(messages)
+
+    def _init_pii_custom_names(self):
+        """Load the user's real name (and other personal identifiers) into
+        the PII guard as custom redaction targets."""
+        if not self.identity:
+            return
+        try:
+            user_md = self.identity.read_file("USER.md")
+            if not user_md:
+                return
+            # Extract name lines like "Name: John Doe" or "# John Doe"
+            for line in user_md.splitlines():
+                line = line.strip()
+                if line.startswith("#"):
+                    name = line.lstrip("# ").strip()
+                    if 2 <= len(name) <= 60:
+                        self.pii_guard.add_custom_replacement(name, "[USER_NAME]")
+                for prefix in ("name:", "full name:", "vorname:", "nachname:"):
+                    if line.lower().startswith(prefix):
+                        name = line[len(prefix):].strip()
+                        if 2 <= len(name) <= 60:
+                            self.pii_guard.add_custom_replacement(name, "[USER_NAME]")
+        except Exception as e:
+            logger.debug(f"Could not load custom PII names: {e}")
+
+    def _apply_privacy_config(self, cfg):
+        """Map PrivacyConfig toggles to PIIGuard pattern categories."""
+        category_map = {
+            "redact_emails": ["email"],
+            "redact_phones": ["phone"],
+            "redact_addresses": ["address_de", "address_us"],
+            "redact_financial": ["iban", "credit_card"],
+            "redact_ids": ["ssn", "steuer_id", "passport", "date_of_birth"],
+        }
+        for attr, patterns in category_map.items():
+            enabled = getattr(cfg, attr, True)
+            for pat_name in patterns:
+                self.pii_guard.set_pattern_enabled(pat_name, enabled)
 
     def _verify_connection(self):
         """Verify Ollama is running and the model is available."""
@@ -195,12 +231,15 @@ class Brain:
 
         tools_desc += (
             f"\n\nAVAILABLE SKILL NAMES (use ONLY these exact names): {skill_names}\n"
-            "You do NOT have a 'weather' skill. For weather, use 'web_search' with a weather query.\n\n"
+            "For weather queries, ALWAYS use the 'weather' skill with the city name.\n\n"
             "IMPORTANT: When you need to use a skill, respond with ONLY the JSON block below and NOTHING else:\n"
             '```json\n{"skill": "skill_name", "parameters": {"param1": "value1"}}\n```\n'
             "Do NOT add any text before or after the JSON block. No explanations, no greetings, no follow-ups.\n"
             "If no skill is needed, respond with normal text only (no JSON blocks at all).\n"
-            "NEVER mix text and JSON in the same response."
+            "NEVER mix text and JSON in the same response.\n\n"
+            "PII PLACEHOLDERS: User data may appear as numbered placeholders like [EMAIL_1], [PHONE_1], [NAME_1], [IBAN_1], [ADDRESS_1], etc. "
+            "When calling skills, use these EXACT placeholders as parameter values — they will be resolved to real data automatically. "
+            "For example: {\"skill\": \"email\", \"parameters\": {\"to\": \"[EMAIL_1]\", \"subject\": \"Booking\"}}"
         )
         return tools_desc
 
@@ -679,9 +718,65 @@ class Brain:
             logger.error(f"Stream error: {e}")
             yield "I encountered an error while streaming the response."
 
+    async def think_stream_async(
+        self,
+        user_input: str,
+        conversation_history: list[dict] = None,
+        system_override: str = None,
+        images: list[str] = None,
+    ):
+        """
+        Async streaming: yields response tokens as they arrive from Ollama.
+        Falls back to non-streaming for cloud providers or vision requests.
+        """
+        # Vision and cloud providers: fall back to non-streaming
+        if images or self._current_provider != "ollama":
+            result = await self.think_async(user_input, conversation_history, system_override, images)
+            yield result
+            return
+
+        # Build system prompt
+        if system_override:
+            system_prompt = system_override
+        elif self.identity:
+            system_prompt = self.identity.build_system_prompt(self.config.system_prompt)
+            system_prompt += self._build_tools_description()
+        else:
+            system_prompt = self.config.system_prompt
+            system_prompt += self._build_tools_description()
+
+        messages = [{"role": "system", "content": system_prompt}]
+        if conversation_history:
+            messages.extend(conversation_history)
+        messages.append({"role": "user", "content": user_input})
+
+        try:
+            async with self.async_client.stream(
+                "POST",
+                "/api/chat",
+                json={
+                    "model": self.config.model,
+                    "messages": messages,
+                    "stream": True,
+                    "options": {
+                        "temperature": self.config.temperature,
+                        "num_ctx": self.config.context_window,
+                    },
+                },
+            ) as response:
+                async for line in response.aiter_lines():
+                    if line:
+                        data = json.loads(line)
+                        if "message" in data and "content" in data["message"]:
+                            yield data["message"]["content"]
+                        if data.get("done", False):
+                            break
+        except Exception as e:
+            logger.error(f"Async stream error: {e}")
+            yield "I encountered an error while streaming the response."
+
     # Map of common LLM hallucinated skill names to actual skill names
     SKILL_ALIASES = {
-        "weather": "web_search",
         "search": "web_search",
         "google": "web_search",
         # Web Fetch (lightweight page reading)

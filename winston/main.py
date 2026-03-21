@@ -35,6 +35,7 @@ from winston.core.pipeline import (
 from winston.skills.base import SkillResult
 from winston.skills.email_skill import EmailSkill
 from winston.skills.web_search import WebSearchSkill
+from winston.skills.weather_skill import WeatherSkill
 from winston.skills.system_control import SystemControlSkill
 from winston.skills.notes_skill import NotesSkill
 from winston.skills.screenshot_skill import ScreenshotSkill
@@ -172,6 +173,7 @@ class Winston:
             BrowserSkill(),
             KnowledgeBaseSkill(),
             ImageGenerationSkill(self.config),
+            WeatherSkill(),
         ]
 
         # Wire ShoppingSkill with reference to BrowserSkill for profile management

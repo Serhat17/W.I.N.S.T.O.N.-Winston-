@@ -599,6 +599,7 @@
 
       <div class="install-tabs">
         <button class="install-tab active" data-tab="homebrew">Homebrew</button>
+        <button class="install-tab" data-tab="docker">Docker</button>
         <button class="install-tab" data-tab="oneliner">One-Liner</button>
         <button class="install-tab" data-tab="manual">Manual</button>
       </div>
@@ -649,6 +650,56 @@ ollama pull qwen2.5:7b</code></pre>
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+
+        <!-- Docker Compose -->
+        <div class="install-panel" id="tab-docker">
+          <div class="install-steps">
+            <div class="install-step">
+              <div class="step-number">1</div>
+              <div class="step-content">
+                <h4>Clone the repo</h4>
+                <div class="code-block terminal-code">
+                  <pre><code>git clone https://github.com/serhatbilge/W.I.N.S.T.O.N..S.git
+cd W.I.N.S.T.O.N..S</code></pre>
+                  <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                </div>
+              </div>
+            </div>
+            <div class="install-step">
+              <div class="step-number">2</div>
+              <div class="step-content">
+                <h4>Configure (optional)</h4>
+                <div class="code-block terminal-code">
+                  <pre><code># Edit .env to add Telegram / Discord tokens, API keys, etc.
+cp .env.example .env
+nano .env</code></pre>
+                  <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                </div>
+                <p class="step-note">All keys are optional — Winston works fully local with Ollama out of the box.</p>
+              </div>
+            </div>
+            <div class="install-step">
+              <div class="step-number">3</div>
+              <div class="step-content">
+                <h4>Start with Docker Compose</h4>
+                <div class="code-block terminal-code">
+                  <pre><code>docker compose up -d</code></pre>
+                  <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                </div>
+                <p class="step-note">This builds the Winston image, starts Ollama, and auto-pulls the default AI model (~4 GB). Web UI is available at <strong>http://localhost:8000</strong>.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="install-what">
+            <h4>What Docker Compose starts:</h4>
+            <ol>
+              <li><strong>ollama</strong> — Local LLM engine with persistent model storage</li>
+              <li><strong>ollama-pull</strong> — One-shot init container that auto-downloads qwen2.5:7b</li>
+              <li><strong>winston</strong> — AI assistant with Web UI, Telegram, and Discord channels</li>
+            </ol>
           </div>
         </div>
 
@@ -763,6 +814,14 @@ winston                # Start chatting</code></pre>
           <div class="command-item">
             <code>winston --help</code>
             <span>Show all options</span>
+          </div>
+          <div class="command-item">
+            <code>docker compose up -d</code>
+            <span>Start via Docker (Ollama + Winston)</span>
+          </div>
+          <div class="command-item">
+            <code>docker compose logs -f</code>
+            <span>View live container logs</span>
           </div>
         </div>
       </div>
