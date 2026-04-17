@@ -75,6 +75,7 @@ class PriceMonitorSkill(BaseSkill):
         # Injected after construction (same pattern as SchedulerSkill)
         self.channel_manager = None
         self.scheduler = None
+        self.brain = None  # For LLM-assisted price extraction
 
     def execute(self, **kwargs) -> SkillResult:
         """Route to the appropriate action handler."""
@@ -132,9 +133,20 @@ class PriceMonitorSkill(BaseSkill):
         # Try to get current price
         initial_price = 0.0
         currency = "EUR"
+        price_source = ""
 
         if url and category == "product":
-            initial_price, currency = self._scrape_product_price(url)
+            initial_price, currency = self._scrape_product_price(url, product_name=name)
+            if initial_price <= 0 and name:
+                # URL scraping failed — try name-based search
+                initial_price, currency = self._search_product_by_name(name)
+                if initial_price > 0:
+                    price_source = " (via web search)"
+        elif not url and name and category == "product":
+            # No URL given — search by name
+            initial_price, currency = self._search_product_by_name(name)
+            if initial_price > 0:
+                price_source = " (via web search)"
         elif category == "flight":
             initial_price, currency = self._search_flight_price(origin, destination, date)
         elif category == "hotel":
@@ -166,7 +178,14 @@ class PriceMonitorSkill(BaseSkill):
         self._save_watches()
         self._ensure_scheduler_task()
 
-        price_info = f" (current: {initial_price:.2f} {currency})" if initial_price else " (initial price not yet available)"
+        if initial_price > 0:
+            price_info = f" (current: {initial_price:.2f} {currency}{price_source})"
+        else:
+            price_info = (
+                " ⚠️ Initial price could not be determined. "
+                "The item will be tracked and checked periodically — "
+                "once a price is found, you'll get notified of any drops."
+            )
 
         return SkillResult(
             success=True,
@@ -315,7 +334,11 @@ class PriceMonitorSkill(BaseSkill):
         currency = item.currency
 
         if item.url and item.category == "product":
-            new_price, currency = self._scrape_product_price(item.url)
+            new_price, currency = self._scrape_product_price(item.url, product_name=item.name)
+            if new_price <= 0 and item.name:
+                new_price, currency = self._search_product_by_name(item.name)
+        elif not item.url and item.name and item.category == "product":
+            new_price, currency = self._search_product_by_name(item.name)
         elif item.category == "flight":
             p = item.search_params
             new_price, currency = self._search_flight_price(
@@ -384,17 +407,98 @@ class PriceMonitorSkill(BaseSkill):
 
     # ── Price fetching helpers ──
 
-    def _scrape_product_price(self, url: str) -> tuple[float, str]:
-        """Scrape a product price from a URL. Returns (price, currency)."""
+    def _scrape_product_price(self, url: str, product_name: str = "") -> tuple[float, str]:
+        """
+        Get a product price. Strategies (in order):
+        1. Direct URL scraping (requests → Playwright → LLM extraction)
+        2. Geizhals.de price comparison (if product name is known)
+        Returns (price, currency).
+        """
+        from winston.utils.scraper import (
+            fetch_page, fetch_page_browser, extract_product_price,
+            search_product_price,
+        )
+
+        # Strategy 1a: requests + structured data
+        html = fetch_page(url)
+        if html:
+            price = extract_product_price(html, url=url)
+            if price and price.amount > 0:
+                logger.info(f"Price via requests: {price.amount} {price.currency}")
+                return price.amount, price.currency
+
+        # Strategy 1b: Playwright + structured data
+        browser_html = fetch_page_browser(url)
+        if browser_html:
+            price = extract_product_price(browser_html, url=url)
+            if price and price.amount > 0:
+                logger.info(f"Price via Playwright: {price.amount} {price.currency}")
+                return price.amount, price.currency
+
+            # Strategy 1c: LLM reads the page text
+            if self.brain:
+                result = self._extract_price_with_llm(browser_html, url, product_name)
+                if result and result[0] > 0:
+                    return result
+
+        # Strategy 2: Geizhals.de / DDG search by product name
+        if product_name:
+            result = search_product_price(product_name)
+            if result and result.amount > 0:
+                logger.info(f"Price via search: {result.amount} {result.currency}")
+                return result.amount, result.currency
+
+        logger.warning(f"All strategies failed for {url}")
+        return 0.0, "EUR"
+
+    def _extract_price_with_llm(self, html: str, url: str = "",
+                                product_name: str = "") -> Optional[tuple[float, str]]:
+        """Use the LLM to extract a product price from page text."""
+        if not self.brain:
+            return None
         try:
-            from winston.utils.scraper import fetch_page, extract_product_price
-            html = fetch_page(url)
-            if html:
-                price = extract_product_price(html, url=url)
-                if price:
-                    return price.amount, price.currency
+            from bs4 import BeautifulSoup
+            soup = BeautifulSoup(html, "html.parser")
+            for tag in soup(["script", "style", "noscript", "meta", "link"]):
+                tag.decompose()
+            text = soup.get_text(" ", strip=True)[:3000]
+            if len(text) < 50:
+                return None
+
+            hint = f" for '{product_name}'" if product_name else ""
+            llm_response = self.brain.think(
+                f"Extract the main product sale price{hint} from this page text. "
+                f"URL: {url}\n\n---\n{text}\n---\n\n"
+                f'Respond ONLY: {{"price": 123.45, "currency": "EUR"}}\n'
+                f'If no price found: {{"price": 0, "currency": "EUR"}}',
+                system_override=(
+                    "You are a price extraction tool. Extract the MAIN sale price "
+                    "(not shipping/bundles). Output ONLY valid JSON."
+                ),
+            )
+            import json as _json
+            clean = llm_response.strip()
+            if clean.startswith("```"):
+                clean = clean.split("\n", 1)[-1].rsplit("```", 1)[0]
+            data = _json.loads(clean)
+            price = float(data.get("price", 0))
+            currency = data.get("currency", "EUR")
+            if price > 0:
+                logger.info(f"Price via LLM: {price} {currency}")
+                return price, currency
         except Exception as e:
-            logger.error(f"Error scraping {url}: {e}")
+            logger.warning(f"LLM price extraction failed: {e}")
+        return None
+
+    def _search_product_by_name(self, name: str) -> tuple[float, str]:
+        """Search for a product price by name (primarily via geizhals.de)."""
+        from winston.utils.scraper import search_product_price
+        try:
+            result = search_product_price(name)
+            if result and result.amount > 0:
+                return result.amount, result.currency
+        except Exception as e:
+            logger.warning(f"Product name search failed for '{name}': {e}")
         return 0.0, "EUR"
 
     def _search_flight_price(self, origin: str, destination: str,

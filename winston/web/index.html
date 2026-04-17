@@ -509,6 +509,45 @@ input,textarea,select{font-family:var(--font);outline:none}
       </div>
     </div>
 
+    <!-- Travel & Flights -->
+    <div class="panel-section">
+      <div class="panel-section-header"><span class="icon">✈️</span><h3>Travel &amp; Flights</h3></div>
+      <div class="panel-section-body">
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-label">SerpAPI Key</div>
+            <div class="setting-desc">Google Flights prices — free 100 searches/month at <a href="https://serpapi.com" target="_blank" style="color:var(--accent)">serpapi.com</a></div>
+          </div>
+          <div class="setting-control">
+            <span class="tag" id="serpapi-status"></span>
+            <input type="password" class="input-field mono" id="serpapi-key" placeholder="your-serpapi-key..." style="width:220px">
+            <button class="btn btn-primary btn-sm" onclick="saveTravelKey('serpapi')">Save</button>
+          </div>
+        </div>
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-label">Amadeus API Key</div>
+            <div class="setting-desc">Optional — detailed flight itineraries from <a href="https://developers.amadeus.com" target="_blank" style="color:var(--accent)">amadeus.com</a></div>
+          </div>
+          <div class="setting-control">
+            <span class="tag" id="amadeus-status"></span>
+            <input type="password" class="input-field mono" id="amadeus-key" placeholder="API key..." style="width:220px">
+            <button class="btn btn-primary btn-sm" onclick="saveTravelKey('amadeus')">Save</button>
+          </div>
+        </div>
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-label">Amadeus API Secret</div>
+            <div class="setting-desc">Required if Amadeus API Key is set</div>
+          </div>
+          <div class="setting-control">
+            <input type="password" class="input-field mono" id="amadeus-secret" placeholder="API secret..." style="width:220px">
+            <button class="btn btn-primary btn-sm" onclick="saveTravelKey('amadeus_secret')">Save</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Telegram -->
     <div class="panel-section">
       <div class="panel-section-header"><span class="icon">📱</span><h3>Telegram</h3></div>
@@ -1300,10 +1339,11 @@ async function loadSettings() {
       </div>`;
   }
 
-  // Refresh status + channel settings + privacy
+  // Refresh status + channel settings + privacy + travel
   loadStatus();
   loadChannelSettings();
   loadPrivacySettings();
+  loadTravelSettings();
 }
 
 async function saveApiKey(provider) {
@@ -1348,6 +1388,34 @@ async function setImageProvider() {
     method:'POST', body: JSON.stringify({provider})
   });
   toast(`Image provider: ${provider}`, 'success');
+}
+
+// ── Travel & Flights Settings ──────────────────────
+async function saveTravelKey(type) {
+  const map = {serpapi: 'serpapi-key', amadeus: 'amadeus-key', amadeus_secret: 'amadeus-secret'};
+  const input = document.getElementById(map[type]);
+  const key = input?.value?.trim();
+  if (!key) return;
+  const r = await apiFetch('/api/settings/travel', {
+    method: 'POST',
+    body: JSON.stringify({key_type: type, api_key: key})
+  });
+  if (r?.status === 'ok') {
+    toast(`${type} key saved`, 'success');
+    input.value = '';
+    loadTravelSettings();
+  } else {
+    toast('Failed to save key', 'error');
+  }
+}
+
+async function loadTravelSettings() {
+  const data = await apiFetch('/api/settings/travel');
+  if (!data) return;
+  const serpEl = document.getElementById('serpapi-status');
+  const amadEl = document.getElementById('amadeus-status');
+  if (serpEl) serpEl.innerHTML = data.serpapi ? '<span class="tag tag-green">✓ Configured</span>' : '<span class="tag tag-dim">Not set</span>';
+  if (amadEl) amadEl.innerHTML = data.amadeus ? '<span class="tag tag-green">✓ Configured</span>' : '<span class="tag tag-dim">Not set</span>';
 }
 
 // ── Channel / Integration Settings ─────────────────

@@ -163,6 +163,12 @@ class AmadeusConfig:
 
 
 @dataclass
+class SerpAPIConfig:
+    """SerpAPI configuration for Google Flights search."""
+    api_key: str = ""  # Free: 100 searches/month at serpapi.com
+
+
+@dataclass
 class GoogleCalendarConfig:
     """Google Calendar API configuration."""
     enabled: bool = False
@@ -242,6 +248,7 @@ class WinstonConfig:
     channels: ChannelsConfig = field(default_factory=ChannelsConfig)
     scheduler: SchedulerConfig = field(default_factory=SchedulerConfig)
     amadeus: AmadeusConfig = field(default_factory=AmadeusConfig)
+    serpapi: SerpAPIConfig = field(default_factory=SerpAPIConfig)
     google_calendar: GoogleCalendarConfig = field(default_factory=GoogleCalendarConfig)
     providers: ProvidersConfig = field(default_factory=ProvidersConfig)
     fallback: FallbackConfig = field(default_factory=FallbackConfig)
@@ -350,6 +357,10 @@ def load_config(config_path: str = None) -> WinstonConfig:
             config.amadeus.api_secret = ac.get("api_secret", config.amadeus.api_secret)
             config.amadeus.environment = ac.get("environment", config.amadeus.environment)
 
+        if "serpapi" in yaml_config:
+            sc = yaml_config["serpapi"]
+            config.serpapi.api_key = sc.get("api_key", config.serpapi.api_key)
+
         if "providers" in yaml_config:
             pc = yaml_config["providers"]
             config.providers.openai_api_key = pc.get("openai_api_key", config.providers.openai_api_key)
@@ -431,6 +442,7 @@ def load_config(config_path: str = None) -> WinstonConfig:
     # Amadeus env overrides
     config.amadeus.api_key = os.getenv("WINSTON_AMADEUS_KEY", config.amadeus.api_key)
     config.amadeus.api_secret = os.getenv("WINSTON_AMADEUS_SECRET", config.amadeus.api_secret)
+    config.serpapi.api_key = os.getenv("SERPAPI_KEY", config.serpapi.api_key)
 
     # Google Calendar env overrides
     gcal_creds = os.getenv("WINSTON_GOOGLE_CALENDAR_CREDS", config.google_calendar.credentials_file)

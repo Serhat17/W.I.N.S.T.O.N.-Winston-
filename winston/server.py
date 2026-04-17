@@ -128,6 +128,7 @@ class WinstonServer:
         if "price_monitor" in self.skills:
             self.skills["price_monitor"].scheduler = self.scheduler
             self.skills["price_monitor"].channel_manager = self.channel_manager
+            self.skills["price_monitor"].brain = self.brain
 
         # Monitor engine for background price checks
         if "price_monitor" in self.skills:
@@ -634,6 +635,42 @@ class WinstonServer:
                 self.skills["image_gen"].default_provider = provider
                 self.skills["image_gen"].default_model = model
             return {"status": "ok", "provider": provider, "model": model}
+
+        # ── Travel & Flights Settings ──
+
+        @app.get("/api/settings/travel")
+        async def get_travel_settings(token: str = Depends(require_auth)):
+            """Get travel API key status (configured or not)."""
+            return {
+                "serpapi": bool(self.config.serpapi.api_key),
+                "amadeus": bool(self.config.amadeus.api_key),
+            }
+
+        @app.post("/api/settings/travel")
+        async def set_travel_key(request: Request, token: str = Depends(require_auth)):
+            """Save a travel service API key."""
+            body = await request.json()
+            key_type = body.get("key_type", "")
+            api_key = body.get("api_key", "")
+            if not key_type or not api_key:
+                raise HTTPException(status_code=400, detail="key_type and api_key required")
+            env_map = {
+                "serpapi": "SERPAPI_KEY",
+                "amadeus": "WINSTON_AMADEUS_KEY",
+                "amadeus_secret": "WINSTON_AMADEUS_SECRET",
+            }
+            env_key = env_map.get(key_type)
+            if not env_key:
+                raise HTTPException(status_code=400, detail="Unknown key_type")
+            save_env_value(env_key, api_key)
+            # Apply immediately
+            if key_type == "serpapi":
+                self.config.serpapi.api_key = api_key
+            elif key_type == "amadeus":
+                self.config.amadeus.api_key = api_key
+            elif key_type == "amadeus_secret":
+                self.config.amadeus.api_secret = api_key
+            return {"status": "ok", "key_type": key_type}
 
         # ── Channel & Integration Settings (Web UI configurable) ──
 

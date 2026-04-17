@@ -80,7 +80,10 @@ class TravelSkill(BaseSkill):
         action = kwargs.get("action", "search_flights")
 
         try:
-            from winston.utils.scraper import search_flight_prices, search_hotel_prices
+            from winston.utils.scraper import (
+                search_flight_prices, search_hotel_prices,
+                get_flight_booking_links,
+            )
         except ImportError:
             return SkillResult(
                 success=False,
@@ -100,30 +103,53 @@ class TravelSkill(BaseSkill):
                 )
 
             results = search_flight_prices(origin, destination, date, max_results=max_results)
-            if not results:
+
+            # Get booking links (from results metadata or generate fresh)
+            booking_links = (
+                results[0].metadata.get("booking_links")
+                if results and results[0].metadata.get("booking_links")
+                else get_flight_booking_links(origin, destination, date)
+            )
+            link_lines = "\n".join(
+                f"- **{lnk['name']}**: {lnk['url']}" for lnk in booking_links
+            )
+
+            if not results or (len(results) == 1 and results[0].amount == 0):
                 return SkillResult(
                     success=True,
-                    message=f"No flight prices found for {origin} -> {destination}" + (f" on {date}" if date else "") + ".",
+                    message=(
+                        f"Keine Flugpreise für {origin} → {destination}"
+                        + (f" am {date}" if date else "")
+                        + " gefunden.\n\n"
+                        f"🌍 **Direkt suchen & vergleichen:**\n{link_lines}"
+                    ),
                 )
 
-            lines = [f"Flight prices found via web search ({origin} -> {destination}):\n"]
+            lines = [f"✈️ **Flugpreise {origin} → {destination}**"
+                     + (f" am {date}" if date else "") + ":\n"]
             for i, p in enumerate(results, 1):
-                lines.append(f"{i}. **{p.amount:.2f} {p.currency}**\n   {p.description}\n   {p.source}\n")
+                if p.amount > 0:
+                    # Show booking URL if available (SerpAPI provides direct links)
+                    booking_url = p.metadata.get("booking_url", "")
+                    source_line = f"   🔗 Buchen: {booking_url}" if booking_url else f"   🔗 {p.source}"
+                    lines.append(
+                        f"{i}. **{p.amount:.0f} {p.currency}**"
+                        f"  —  {p.description}\n"
+                        f"{source_line}\n"
+                    )
 
-            # Append direct booking links
-            links = [
-                f"- **Google Flights**: https://www.google.com/travel/flights?q=Flights%20from%20{origin}%20to%20{destination}%20on%20{date}",
-                f"- **Kayak**: https://www.kayak.com/flights/{origin.lower()}-{destination.lower()}/{date}",
-                f"- **Skyscanner**: https://www.skyscanner.net/transport/flights/{origin.lower()}/{destination.lower()}/{date}/",
-                f"- **Booking.com**: https://flights.booking.com/flights/{origin}-{destination}/?type=ONEWAY&adults=1&cabinClass=ECONOMY&depart={date}",
-                f"- **Expedia**: https://www.expedia.com/Flights-Search?mode=search&leg1=from:{origin},to:{destination},departure:{date.replace('-', '/')}&passengers=children:0,adults:1,seniors:0,infantinlap:Y"
-            ]
-            lines.append("\n🌍 **Direct Search & Compare Links (includes Turkish Airlines, Pegasus, etc.):**\n" + "\n".join(links))
+            lines.append(
+                f"\n🌍 **Direkt suchen & buchen:**\n{link_lines}"
+            )
 
             return SkillResult(
                 success=True,
                 message="\n".join(lines),
-                data=[{"amount": p.amount, "currency": p.currency, "source": p.source} for p in results],
+                data=[
+                    {"amount": p.amount, "currency": p.currency,
+                     "source": p.source, "description": p.description}
+                    for p in results if p.amount > 0
+                ],
                 speak=False,
             )
 
@@ -289,18 +315,16 @@ class TravelSkill(BaseSkill):
             lines.append("\n")
 
         # Append direct booking links
-        links = [
-            f"- **Google Flights**: https://www.google.com/travel/flights?q=Flights%20from%20{origin}%20to%20{destination}%20on%20{departure_date}",
-            f"- **Kayak**: https://www.kayak.com/flights/{origin.lower()}-{destination.lower()}/{departure_date}",
-            f"- **Skyscanner**: https://www.skyscanner.net/transport/flights/{origin.lower()}/{destination.lower()}/{departure_date}/",
-            f"- **Booking.com**: https://flights.booking.com/flights/{origin}-{destination}/?type=ONEWAY&adults=1&cabinClass=ECONOMY&depart={departure_date}",
-            f"- **Expedia**: https://www.expedia.com/Flights-Search?mode=search&leg1=from:{origin},to:{destination},departure:{departure_date.replace('-', '/')}&passengers=children:0,adults:1,seniors:0,infantinlap:Y"
-        ]
-        if return_date:
-            # Modify Kayak link for round trips just as an example
-            links[1] = f"- **Kayak**: https://www.kayak.com/flights/{origin.lower()}-{destination.lower()}/{departure_date}/{return_date}"
-            
-        lines.append("\n🌍 **Direct Search & Compare Links (includes Turkish Airlines, Pegasus, etc.):**\n" + "\n".join(links) + "\n")
+        try:
+            from winston.utils.scraper import get_flight_booking_links
+            booking_links = get_flight_booking_links(origin, destination, departure_date)
+            link_lines = "\n".join(
+                f"- **{lnk['name']}**: {lnk['url']}" for lnk in booking_links
+            )
+        except ImportError:
+            link_lines = f"- **Kayak**: https://www.kayak.de/flights/{origin}-{destination}/{departure_date}?sort=price_a"
+
+        lines.append(f"\n🌍 **Direkt suchen & buchen:**\n{link_lines}\n")
 
         return "".join(lines).rstrip() + "\n"
 
